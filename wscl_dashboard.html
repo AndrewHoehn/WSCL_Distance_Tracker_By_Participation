@@ -26,6 +26,7 @@
                 const [loading, setLoading] = useState(true);
                 const [error, setError] = useState(null);
                 const [activeTab, setActiveTab] = useState("leaderboard");
+                const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
                 // Filters
                 const [seasonFilter, setSeasonFilter] = useState("all");
@@ -126,7 +127,90 @@
 
                             {/* Navigation Tabs */}
                             <div className="bg-white rounded-lg shadow-lg mb-6">
-                                <div className="flex border-b">
+                                {/* Mobile Menu Button */}
+                                <div className="md:hidden border-b p-4">
+                                    <button
+                                        onClick={() =>
+                                            setMobileMenuOpen(!mobileMenuOpen)
+                                        }
+                                        className="w-full flex items-center justify-between text-left font-semibold text-gray-800"
+                                    >
+                                        <span className="flex items-center gap-2">
+                                            {activeTab === "leaderboard" &&
+                                                "📊 Team Leaderboard"}
+                                            {activeTab === "venues" &&
+                                                "📍 Venue Analysis"}
+                                            {activeTab === "teams" &&
+                                                "👥 Team Deep Dive"}
+                                            {activeTab === "methodology" &&
+                                                "📖 Methodology"}
+                                        </span>
+                                        <span className="text-xl">
+                                            {mobileMenuOpen ? "×" : "☰"}
+                                        </span>
+                                    </button>
+                                </div>
+
+                                {/* Mobile Menu */}
+                                {mobileMenuOpen && (
+                                    <div className="md:hidden border-b">
+                                        <button
+                                            onClick={() => {
+                                                setActiveTab("leaderboard");
+                                                setMobileMenuOpen(false);
+                                            }}
+                                            className={`w-full text-left px-6 py-4 font-semibold transition-colors ${
+                                                activeTab === "leaderboard"
+                                                    ? "bg-blue-50 text-blue-600"
+                                                    : "text-gray-600 hover:bg-gray-50"
+                                            }`}
+                                        >
+                                            📊 Team Leaderboard
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setActiveTab("venues");
+                                                setMobileMenuOpen(false);
+                                            }}
+                                            className={`w-full text-left px-6 py-4 font-semibold transition-colors ${
+                                                activeTab === "venues"
+                                                    ? "bg-blue-50 text-blue-600"
+                                                    : "text-gray-600 hover:bg-gray-50"
+                                            }`}
+                                        >
+                                            📍 Venue Analysis
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setActiveTab("teams");
+                                                setMobileMenuOpen(false);
+                                            }}
+                                            className={`w-full text-left px-6 py-4 font-semibold transition-colors ${
+                                                activeTab === "teams"
+                                                    ? "bg-blue-50 text-blue-600"
+                                                    : "text-gray-600 hover:bg-gray-50"
+                                            }`}
+                                        >
+                                            👥 Team Deep Dive
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setActiveTab("methodology");
+                                                setMobileMenuOpen(false);
+                                            }}
+                                            className={`w-full text-left px-6 py-4 font-semibold transition-colors ${
+                                                activeTab === "methodology"
+                                                    ? "bg-blue-50 text-blue-600"
+                                                    : "text-gray-600 hover:bg-gray-50"
+                                            }`}
+                                        >
+                                            📖 Methodology
+                                        </button>
+                                    </div>
+                                )}
+
+                                {/* Desktop Tabs */}
+                                <div className="hidden md:flex border-b">
                                     <button
                                         onClick={() =>
                                             setActiveTab("leaderboard")
@@ -137,7 +221,7 @@
                                                 : "text-gray-600 hover:text-gray-800"
                                         }`}
                                     >
-                                        Team Leaderboard
+                                        📊 Team Leaderboard
                                     </button>
                                     <button
                                         onClick={() => setActiveTab("venues")}
@@ -147,7 +231,7 @@
                                                 : "text-gray-600 hover:text-gray-800"
                                         }`}
                                     >
-                                        Venue Analysis
+                                        📍 Venue Analysis
                                     </button>
                                     <button
                                         onClick={() => setActiveTab("teams")}
@@ -157,7 +241,7 @@
                                                 : "text-gray-600 hover:text-gray-800"
                                         }`}
                                     >
-                                        Team Deep Dive
+                                        👥 Team Deep Dive
                                     </button>
                                     <button
                                         onClick={() =>
@@ -169,7 +253,7 @@
                                                 : "text-gray-600 hover:text-gray-800"
                                         }`}
                                     >
-                                        Methodology
+                                        📖 Methodology
                                     </button>
                                 </div>
                             </div>
@@ -389,85 +473,85 @@
                         </div>
 
                         {/* Summary Stats */}
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                            <div className="bg-white rounded-lg shadow-lg p-6">
-                                <div className="text-sm text-gray-500 mb-1">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
+                            <div className="bg-white rounded-lg shadow-lg p-4 md:p-6">
+                                <div className="text-xs md:text-sm text-gray-500 mb-1">
                                     Total Miles
                                 </div>
-                                <div className="text-3xl font-bold text-blue-600">
+                                <div className="text-xl md:text-3xl font-bold text-blue-600">
                                     {totalMiles.toLocaleString(undefined, {
                                         maximumFractionDigits: 0,
                                     })}
                                 </div>
                                 <div className="text-xs text-gray-500 mt-1">
-                                    Round-trip distance
+                                    Round-trip
                                 </div>
                             </div>
 
-                            <div className="bg-white rounded-lg shadow-lg p-6">
-                                <div className="text-sm text-gray-500 mb-1">
-                                    Team Race Entries
+                            <div className="bg-white rounded-lg shadow-lg p-4 md:p-6">
+                                <div className="text-xs md:text-sm text-gray-500 mb-1">
+                                    Team Entries
                                 </div>
-                                <div className="text-3xl font-bold text-green-600">
+                                <div className="text-xl md:text-3xl font-bold text-green-600">
                                     {totalRaceEntries.toLocaleString()}
                                 </div>
                                 <div className="text-xs text-gray-500 mt-1">
-                                    From league teams
+                                    League teams
                                 </div>
                             </div>
 
-                            <div className="bg-white rounded-lg shadow-lg p-6">
-                                <div className="text-sm text-gray-500 mb-1">
-                                    Independent Entries
+                            <div className="bg-white rounded-lg shadow-lg p-4 md:p-6">
+                                <div className="text-xs md:text-sm text-gray-500 mb-1">
+                                    Independent
                                 </div>
-                                <div className="text-3xl font-bold text-orange-600">
+                                <div className="text-xl md:text-3xl font-bold text-orange-600">
                                     {totalIndependentEntries.toLocaleString()}
                                 </div>
                                 <div className="text-xs text-gray-500 mt-1">
-                                    No travel tracked
+                                    No travel
                                 </div>
                             </div>
 
-                            <div className="bg-white rounded-lg shadow-lg p-6">
-                                <div className="text-sm text-gray-500 mb-1">
+                            <div className="bg-white rounded-lg shadow-lg p-4 md:p-6">
+                                <div className="text-xs md:text-sm text-gray-500 mb-1">
                                     Events
                                 </div>
-                                <div className="text-3xl font-bold text-purple-600">
+                                <div className="text-xl md:text-3xl font-bold text-purple-600">
                                     {totalEvents}
                                 </div>
                                 <div className="text-xs text-gray-500 mt-1">
-                                    Race dates in period
+                                    Race dates
                                 </div>
                             </div>
                         </div>
 
                         {/* Leaderboard Table */}
-                        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-                            <h2 className="text-2xl font-bold text-gray-800 mb-4">
+                        <div className="bg-white rounded-lg shadow-lg p-4 md:p-6 mb-6">
+                            <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-4">
                                 Team Leaderboard
                             </h2>
 
-                            <div className="overflow-x-auto">
-                                <table className="w-full">
+                            <div className="overflow-x-auto -mx-4 md:mx-0">
+                                <table className="w-full min-w-[600px]">
                                     <thead>
                                         <tr className="border-b-2 border-gray-200">
-                                            <th className="text-left py-3 px-4 font-semibold text-gray-700">
+                                            <th className="text-left py-2 md:py-3 px-2 md:px-4 font-semibold text-gray-700 text-sm md:text-base">
                                                 Rank
                                             </th>
-                                            <th className="text-left py-3 px-4 font-semibold text-gray-700">
+                                            <th className="text-left py-2 md:py-3 px-2 md:px-4 font-semibold text-gray-700 text-sm md:text-base">
                                                 Team
                                             </th>
-                                            <th className="text-right py-3 px-4 font-semibold text-gray-700">
+                                            <th className="text-right py-2 md:py-3 px-2 md:px-4 font-semibold text-gray-700 text-sm md:text-base">
                                                 Miles
                                             </th>
-                                            <th className="text-right py-3 px-4 font-semibold text-gray-700">
+                                            <th className="text-right py-2 md:py-3 px-2 md:px-4 font-semibold text-gray-700 text-sm md:text-base">
                                                 Time
                                             </th>
-                                            <th className="text-right py-3 px-4 font-semibold text-gray-700">
+                                            <th className="text-right py-2 md:py-3 px-2 md:px-4 font-semibold text-gray-700 text-sm md:text-base">
                                                 Races
                                             </th>
                                             {viewMode === "actual" && (
-                                                <th className="text-right py-3 px-4 font-semibold text-gray-700">
+                                                <th className="text-right py-2 md:py-3 px-2 md:px-4 font-semibold text-gray-700 text-sm md:text-base">
                                                     Entries
                                                 </th>
                                             )}
@@ -479,9 +563,9 @@
                                                 key={team.name}
                                                 className="border-b border-gray-100 hover:bg-gray-50"
                                             >
-                                                <td className="py-3 px-4">
+                                                <td className="py-2 md:py-3 px-2 md:px-4">
                                                     <span
-                                                        className={`font-bold ${index < 3 ? "text-xl" : "text-lg"}`}
+                                                        className={`font-bold ${index < 3 ? "text-lg md:text-xl" : "text-base md:text-lg"}`}
                                                     >
                                                         {index === 0 && "🥇"}
                                                         {index === 1 && "🥈"}
@@ -490,10 +574,10 @@
                                                             `${index + 1}`}
                                                     </span>
                                                 </td>
-                                                <td className="py-3 px-4 font-medium text-gray-800">
+                                                <td className="py-2 md:py-3 px-2 md:px-4 font-medium text-gray-800 text-sm md:text-base">
                                                     {team.name}
                                                 </td>
-                                                <td className="py-3 px-4 text-right font-semibold text-blue-600">
+                                                <td className="py-2 md:py-3 px-2 md:px-4 text-right font-semibold text-blue-600 text-sm md:text-base">
                                                     {team.miles.toLocaleString(
                                                         undefined,
                                                         {
@@ -502,14 +586,14 @@
                                                     )}{" "}
                                                     mi
                                                 </td>
-                                                <td className="py-3 px-4 text-right text-gray-600">
+                                                <td className="py-2 md:py-3 px-2 md:px-4 text-right text-gray-600 text-sm md:text-base">
                                                     {formatTime(team.minutes)}
                                                 </td>
-                                                <td className="py-3 px-4 text-right text-gray-600">
+                                                <td className="py-2 md:py-3 px-2 md:px-4 text-right text-gray-600 text-sm md:text-base">
                                                     {team.races}
                                                 </td>
                                                 {viewMode === "actual" && (
-                                                    <td className="py-3 px-4 text-right text-gray-600">
+                                                    <td className="py-2 md:py-3 px-2 md:px-4 text-right text-gray-600 text-sm md:text-base">
                                                         {team.riders}
                                                     </td>
                                                 )}
@@ -521,8 +605,8 @@
                         </div>
 
                         {/* Visual Chart */}
-                        <div className="bg-white rounded-lg shadow-lg p-6">
-                            <h2 className="text-2xl font-bold text-gray-800 mb-4">
+                        <div className="bg-white rounded-lg shadow-lg p-4 md:p-6">
+                            <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-4">
                                 Visual Comparison - Top 15 Teams
                             </h2>
                             <div className="space-y-2">
@@ -534,22 +618,22 @@
                                     return (
                                         <div
                                             key={team.name}
-                                            className="flex items-center gap-3"
+                                            className="flex items-center gap-2 md:gap-3"
                                         >
                                             <div
-                                                className="w-32 text-sm font-medium text-gray-700 truncate"
+                                                className="w-24 md:w-32 text-xs md:text-sm font-medium text-gray-700 truncate"
                                                 title={team.name}
                                             >
                                                 {team.name}
                                             </div>
-                                            <div className="flex-1 bg-gray-200 rounded-full h-8 relative">
+                                            <div className="flex-1 bg-gray-200 rounded-full h-6 md:h-8 relative">
                                                 <div
-                                                    className="bg-blue-500 h-8 rounded-full flex items-center justify-end pr-3 transition-all duration-500"
+                                                    className="bg-blue-500 h-6 md:h-8 rounded-full flex items-center justify-end pr-2 md:pr-3 transition-all duration-500"
                                                     style={{
                                                         width: `${percentage}%`,
                                                     }}
                                                 >
-                                                    <span className="text-white font-semibold text-sm">
+                                                    <span className="text-white font-semibold text-xs md:text-sm">
                                                         {team.miles.toLocaleString(
                                                             undefined,
                                                             {
@@ -961,21 +1045,21 @@
                                 </div>
 
                                 {/* Key Statistics */}
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                                    <div className="bg-white rounded-lg shadow-lg p-4">
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
+                                    <div className="bg-white rounded-lg shadow-lg p-3 md:p-4">
                                         <div className="text-xs text-gray-500 mb-1">
-                                            Races Attended
+                                            Races
                                         </div>
-                                        <div className="text-2xl font-bold text-purple-600">
+                                        <div className="text-xl md:text-2xl font-bold text-purple-600">
                                             {racesAttended}
                                         </div>
                                     </div>
 
-                                    <div className="bg-white rounded-lg shadow-lg p-4">
+                                    <div className="bg-white rounded-lg shadow-lg p-3 md:p-4">
                                         <div className="text-xs text-gray-500 mb-1">
-                                            Avg Entries/Race
+                                            Avg/Race
                                         </div>
-                                        <div className="text-2xl font-bold text-green-600">
+                                        <div className="text-xl md:text-2xl font-bold text-green-600">
                                             {avgRidersPerRace.toLocaleString(
                                                 undefined,
                                                 { maximumFractionDigits: 1 },
@@ -983,45 +1067,39 @@
                                         </div>
                                     </div>
 
-                                    <div className="bg-white rounded-lg shadow-lg p-4">
+                                    <div className="bg-white rounded-lg shadow-lg p-3 md:p-4">
                                         <div className="text-xs text-gray-500 mb-1">
-                                            Avg Theoretical Distance
+                                            Avg Theory
                                         </div>
-                                        <div className="text-2xl font-bold text-blue-600">
+                                        <div className="text-xl md:text-2xl font-bold text-blue-600">
                                             {avgTheoreticalMiles.toLocaleString(
                                                 undefined,
                                                 { maximumFractionDigits: 0 },
                                             )}{" "}
                                             mi
                                         </div>
-                                        <div className="text-xs text-gray-500">
-                                            per race venue
-                                        </div>
                                     </div>
 
-                                    <div className="bg-white rounded-lg shadow-lg p-4">
+                                    <div className="bg-white rounded-lg shadow-lg p-3 md:p-4">
                                         <div className="text-xs text-gray-500 mb-1">
-                                            Avg Actual Travel
+                                            Avg Actual
                                         </div>
-                                        <div className="text-2xl font-bold text-orange-600">
+                                        <div className="text-xl md:text-2xl font-bold text-orange-600">
                                             {avgMilesPerRace.toLocaleString(
                                                 undefined,
                                                 { maximumFractionDigits: 0 },
                                             )}{" "}
                                             mi
                                         </div>
-                                        <div className="text-xs text-gray-500">
-                                            per race attended
-                                        </div>
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-6">
                                     <div className="bg-white rounded-lg shadow-lg p-4">
                                         <div className="text-xs text-gray-500 mb-1">
                                             Cumulative Distance
                                         </div>
-                                        <div className="text-3xl font-bold text-blue-600">
+                                        <div className="text-2xl md:text-3xl font-bold text-blue-600">
                                             {totalMiles.toLocaleString(
                                                 undefined,
                                                 { maximumFractionDigits: 0 },
@@ -1037,7 +1115,7 @@
                                         <div className="text-xs text-gray-500 mb-1">
                                             Cumulative Time
                                         </div>
-                                        <div className="text-3xl font-bold text-indigo-600">
+                                        <div className="text-2xl md:text-3xl font-bold text-indigo-600">
                                             {formatTime(totalMinutes)}
                                         </div>
                                         <div className="text-xs text-gray-500 mt-1">
@@ -1047,8 +1125,8 @@
                                 </div>
 
                                 {/* Race by Race Chart */}
-                                <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-                                    <h2 className="text-xl font-bold text-gray-800 mb-4">
+                                <div className="bg-white rounded-lg shadow-lg p-4 md:p-6 mb-6">
+                                    <h2 className="text-lg md:text-xl font-bold text-gray-800 mb-4">
                                         Distance to Each Race
                                     </h2>
                                     <div className="space-y-3">
@@ -1057,33 +1135,33 @@
                                                 key={race.date}
                                                 className="border-b border-gray-100 pb-3"
                                             >
-                                                <div className="flex justify-between items-start mb-2">
+                                                <div className="flex flex-col md:flex-row md:justify-between md:items-start mb-2 gap-1">
                                                     <div>
-                                                        <div className="font-semibold text-gray-800">
+                                                        <div className="font-semibold text-gray-800 text-sm md:text-base">
                                                             {race.date} -{" "}
                                                             {race.venue}
                                                         </div>
-                                                        <div className="text-sm text-gray-500">
+                                                        <div className="text-xs md:text-sm text-gray-500">
                                                             {race.city}
                                                         </div>
                                                     </div>
-                                                    <div className="text-right">
+                                                    <div className="text-left md:text-right">
                                                         {race.attended ? (
-                                                            <span className="text-green-600 font-semibold text-sm">
+                                                            <span className="text-green-600 font-semibold text-xs md:text-sm">
                                                                 ✓ Attended (
                                                                 {race.riders}{" "}
                                                                 entries)
                                                             </span>
                                                         ) : (
-                                                            <span className="text-gray-400 text-sm">
+                                                            <span className="text-gray-400 text-xs md:text-sm">
                                                                 Not attended
                                                             </span>
                                                         )}
                                                     </div>
                                                 </div>
 
-                                                <div className="flex gap-4 items-center">
-                                                    <div className="flex-1">
+                                                <div className="space-y-2">
+                                                    <div>
                                                         <div className="flex justify-between text-xs text-gray-600 mb-1">
                                                             <span>
                                                                 Theoretical (1
@@ -1110,9 +1188,9 @@
                                                     </div>
 
                                                     {race.attended && (
-                                                        <div className="flex-1">
+                                                        <div>
                                                             <div className="flex justify-between text-xs text-gray-600 mb-1">
-                                                                <span>
+                                                                <span className="truncate">
                                                                     Actual (
                                                                     {
                                                                         race.riders
@@ -1122,9 +1200,9 @@
                                                                         race.riders /
                                                                             ridersPerVehicle,
                                                                     )}{" "}
-                                                                    vehicles)
+                                                                    veh)
                                                                 </span>
-                                                                <span>
+                                                                <span className="ml-2">
                                                                     {race.actualMiles.toLocaleString(
                                                                         undefined,
                                                                         {
@@ -1556,15 +1634,20 @@
                                         Future races show theoretical data only
                                         until attendance is recorded
                                     </li>
-                                    <li>
-                                        Rider counts per race are calculated
-                                        based on the number of riders who are
-                                        listed in the RaceResults system on the
-                                        WSCL website. Riders who may have
-                                        attended a race but are not listed are
-                                        excluded from the count.
-                                    </li>
                                 </ul>
+                            </section>
+
+                            <section className="border-t-2 border-gray-200 pt-6">
+                                <h3 className="text-2xl font-bold text-gray-800 mb-3">
+                                    Data Updates
+                                </h3>
+                                <p className="text-gray-700">
+                                    To update the dashboard with new race data
+                                    or attendance information, re-run the
+                                    geocoding script with updated CSV files. The
+                                    script will regenerate all calculations and
+                                    update the JSON data file.
+                                </p>
                             </section>
                         </div>
                     </div>
