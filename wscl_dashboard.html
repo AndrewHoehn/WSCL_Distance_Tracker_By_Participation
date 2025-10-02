@@ -1229,25 +1229,25 @@
                                 </div>
 
                                 {/* Venues Ranked by Distance */}
-                                <div className="bg-white rounded-lg shadow-lg p-6">
-                                    <h2 className="text-xl font-bold text-gray-800 mb-4">
-                                        Race Venues Ranked by Distance
+                                <div className="bg-white rounded-lg shadow-lg p-4 md:p-6">
+                                    <h2 className="text-lg md:text-xl font-bold text-gray-800 mb-4">
+                                        Venues Ranked by Distance
                                     </h2>
-                                    <div className="overflow-x-auto">
-                                        <table className="w-full">
+                                    <div className="overflow-x-auto -mx-4 md:mx-0">
+                                        <table className="w-full min-w-[500px]">
                                             <thead>
                                                 <tr className="border-b-2 border-gray-200">
-                                                    <th className="text-left py-3 px-4 font-semibold text-gray-700">
+                                                    <th className="text-left py-2 md:py-3 px-2 md:px-4 font-semibold text-gray-700 text-sm md:text-base">
                                                         Rank
                                                     </th>
-                                                    <th className="text-left py-3 px-4 font-semibold text-gray-700">
+                                                    <th className="text-left py-2 md:py-3 px-2 md:px-4 font-semibold text-gray-700 text-sm md:text-base">
                                                         Venue
                                                     </th>
-                                                    <th className="text-right py-3 px-4 font-semibold text-gray-700">
-                                                        Round-Trip
+                                                    <th className="text-right py-2 md:py-3 px-2 md:px-4 font-semibold text-gray-700 text-sm md:text-base">
+                                                        Miles
                                                     </th>
-                                                    <th className="text-right py-3 px-4 font-semibold text-gray-700">
-                                                        Travel Time
+                                                    <th className="text-right py-2 md:py-3 px-2 md:px-4 font-semibold text-gray-700 text-sm md:text-base">
+                                                        Time
                                                     </th>
                                                 </tr>
                                             </thead>
@@ -1258,20 +1258,20 @@
                                                             key={venue.key}
                                                             className="border-b border-gray-100 hover:bg-gray-50"
                                                         >
-                                                            <td className="py-3 px-4 font-bold text-gray-600">
+                                                            <td className="py-2 md:py-3 px-2 md:px-4 font-bold text-gray-600 text-sm md:text-base">
                                                                 {index + 1}
                                                             </td>
-                                                            <td className="py-3 px-4">
-                                                                <div className="font-medium text-gray-800">
+                                                            <td className="py-2 md:py-3 px-2 md:px-4">
+                                                                <div className="font-medium text-gray-800 text-sm md:text-base">
                                                                     {
                                                                         venue.venue
                                                                     }
                                                                 </div>
-                                                                <div className="text-sm text-gray-500">
+                                                                <div className="text-xs md:text-sm text-gray-500">
                                                                     {venue.city}
                                                                 </div>
                                                             </td>
-                                                            <td className="py-3 px-4 text-right font-semibold text-blue-600">
+                                                            <td className="py-2 md:py-3 px-2 md:px-4 text-right font-semibold text-blue-600 text-sm md:text-base">
                                                                 {venue.distance.toLocaleString(
                                                                     undefined,
                                                                     {
@@ -1280,7 +1280,7 @@
                                                                 )}{" "}
                                                                 mi
                                                             </td>
-                                                            <td className="py-3 px-4 text-right text-gray-600">
+                                                            <td className="py-2 md:py-3 px-2 md:px-4 text-right text-gray-600 text-sm md:text-base">
                                                                 {formatTime(
                                                                     venue.time,
                                                                 )}
@@ -1301,14 +1301,14 @@
             // METHODOLOGY VIEW
             function MethodologyView() {
                 return (
-                    <div className="bg-white rounded-lg shadow-lg p-8">
-                        <h2 className="text-3xl font-bold text-gray-800 mb-6">
+                    <div className="bg-white rounded-lg shadow-lg p-4 md:p-8">
+                        <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-4 md:mb-6">
                             Methodology & Calculations
                         </h2>
 
-                        <div className="prose max-w-none space-y-6">
+                        <div className="prose max-w-none space-y-4 md:space-y-6 text-sm md:text-base">
                             <section>
-                                <h3 className="text-2xl font-bold text-gray-800 mb-3">
+                                <h3 className="text-xl md:text-2xl font-bold text-gray-800 mb-2 md:mb-3">
                                     Overview
                                 </h3>
                                 <p className="text-gray-700">
@@ -1634,20 +1634,27 @@
                                         Future races show theoretical data only
                                         until attendance is recorded
                                     </li>
+                                    <li>
+                                        Rider counts per race are calculated
+                                        based on the number of riders who are
+                                        listed in the RaceResults system on the
+                                        WSCL website. Riders who may have
+                                        attended a race but not raced are
+                                        excluded from the count.
+                                    </li>
+                                    <li>
+                                        The coaches race data is wonky, so it's
+                                        not included in the calculations. I
+                                        assume most coaches aren't particularly
+                                        attending races just to race, and are
+                                        bringing at least one rider with them in
+                                        their vehicle.
+                                    </li>
+                                    <li>
+                                        Similarly, the Cle Elum relay data was
+                                        also wonky, so it's excluded.
+                                    </li>
                                 </ul>
-                            </section>
-
-                            <section className="border-t-2 border-gray-200 pt-6">
-                                <h3 className="text-2xl font-bold text-gray-800 mb-3">
-                                    Data Updates
-                                </h3>
-                                <p className="text-gray-700">
-                                    To update the dashboard with new race data
-                                    or attendance information, re-run the
-                                    geocoding script with updated CSV files. The
-                                    script will regenerate all calculations and
-                                    update the JSON data file.
-                                </p>
                             </section>
                         </div>
                     </div>
@@ -1747,7 +1754,7 @@
             function formatTime(minutes) {
                 const hours = Math.floor(minutes / 60);
                 const mins = Math.round(minutes % 60);
-                return `${hours}h ${mins}m`;
+                return `${hours.toLocaleString()}h ${mins}m`;
             }
 
             ReactDOM.render(<WSCLDashboard />, document.getElementById("root"));
