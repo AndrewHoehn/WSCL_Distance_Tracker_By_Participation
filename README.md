@@ -303,6 +303,8 @@ This covers Washington, Idaho, and northern Oregon.
 - Travel times are estimates without real-time traffic
 - Does not account for riders living far from team home base
 - Carpooling rates may vary by race and team
+- Does not include racers who attend a race, but do not race
+- Does not include data from the coaches race, or the Cle Elum relay 
 
 ## 🔄 Updating for New Seasons
 
