@@ -112,6 +112,8 @@ python3 -m http.server 8000
 
 Open your browser to: `http://localhost:8000/wscl_dashboard.html`
 
+Or host it somewhere on the internet. 
+
 ## 📦 Installation
 
 ### Detailed Setup
