@@ -5,18 +5,6 @@ An interactive web dashboard for tracking and analyzing travel distances for Was
 ![Dashboard Preview](https://img.shields.io/badge/status-active-success.svg)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 
-## 📋 Table of Contents
-
-- [Overview](#overview)
-- [Features](#features)
-- [Quick Start](#quick-start)
-- [Installation](#installation)
-- [Usage](#usage)
-- [Data Structure](#data-structure)
-- [Methodology](#methodology)
-- [Contributing](#contributing)
-- [License](#license)
-
 ## 🎯 Overview
 
 The WSCL Travel Distance Tracker calculates and visualizes the environmental and logistical impact of student cycling teams traveling to races. It uses Google Maps APIs to calculate precise driving distances and times, then combines this with actual attendance data to provide comprehensive insights.
@@ -27,6 +15,10 @@ The WSCL Travel Distance Tracker calculates and visualizes the environmental and
 - Travel time calculations
 - Vehicle requirements based on carpooling
 - Season-by-season comparisons
+
+## 🤷 Why?
+
+We spend a lot of our time driving back and forth to races every spring and fall, and thought to ourselves, "I'll bet our team drives more than these other teams." But I'll be we're not the only parents who thinik tha. So, we made a tool to answer that quesiton. 
 
 ## ✨ Features
 
