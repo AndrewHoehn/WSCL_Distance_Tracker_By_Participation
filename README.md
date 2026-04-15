@@ -1,393 +1,114 @@
 # WSCL Travel Distance Tracker
 
-An interactive web dashboard for tracking and analyzing travel distances for Washington Student Cycling League (WSCL) teams traveling to races throughout Washington state.
+An interactive dashboard that tracks how far Washington Student Cycling League teams drive to get to races — and what it costs them.
 
 ![Dashboard Preview](https://img.shields.io/badge/status-active-success.svg)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 
-## 🎯 Overview
+## Why This Exists
 
-The WSCL Travel Distance Tracker calculates and visualizes the environmental and logistical impact of student cycling teams traveling to races. It uses Google Maps APIs to calculate precise driving distances and times, then combines this with actual attendance data to provide comprehensive insights.
+WSCL teams are spread across Washington and Idaho. Some families drive 20 minutes to a race; others drive 6 hours. This dashboard makes that visible — who's logging the most miles, which venues generate the most driving, and what a season of racing actually costs a family depending on where they live.
 
-**Key Metrics:**
-- Total miles traveled by each team
-- Average distance per race entry
-- Travel time calculations
-- Vehicle requirements based on carpooling
-- Season-by-season comparisons
+## How to View the Dashboard
 
-## 🤷 Why?
+**Option 1 — Just open the file:**
+Download `wscl_dashboard_v2.html` and `wscl_distance_data.js` into the same folder. Open the HTML file in your browser. No server needed.
 
-We spend a lot of our time driving back and forth to races every spring and fall, and thought to ourselves, "I'll bet our team drives more than these other teams." But I'll be we're not the only parents who thinik tha. So, we made a tool to answer that quesiton. 
-
-## ✨ Features
-
-### 📊 Four Interactive Views
-
-1. **Team Leaderboard**
-   - Rank teams by total or average travel distance
-   - Filter by season (Spring/Fall) or view all-time stats
-   - Toggle between actual attendance and theoretical comparisons
-   - Adjust riders-per-vehicle assumptions
-
-2. **Venue Analysis**
-   - See travel distances from all teams to each venue
-   - Compare theoretical vs. actual travel for specific events
-   - Identify which venues are most/least accessible
-
-3. **Team Deep Dive**
-   - Comprehensive statistics for individual teams
-   - Race-by-race breakdown with visual charts
-   - Venue rankings by distance from team home base
-   - Cumulative totals and averages
-
-4. **Methodology**
-   - Detailed explanation of all calculations
-   - Data sources and processing methods
-   - Transparency in assumptions and limitations
-
-### 🔧 Advanced Features
-
-- **Smart Date Matching**: Automatically matches attendance records to events within a ±2 day window
-- **Efficient Geocoding**: Calculates distances once per team-venue pair, even for recurring events
-- **Independent Rider Tracking**: Tracks unaffiliated riders separately (no travel calculations)
-- **Configurable Settings**: Adjust riders-per-vehicle to see how carpooling impacts totals
-- **Responsive Design**: Works on desktop, tablet, and mobile devices
-
-## 🚀 Quick Start
-
-### Prerequisites
-
-- Node.js (v14 or higher)
-- Google Maps API key with:
-  - Geocoding API enabled
-  - Distance Matrix API enabled
-- Python 3 (for running local web server)
-
-### 1. Clone the Repository
-
+**Option 2 — Local server:**
 ```bash
-git clone https://github.com/AndrewHoehn/wscl-travel-tracker.git
-cd wscl-travel-tracker
-```
-
-### 2. Install Dependencies
-
-```bash
-npm install papaparse axios
-```
-
-### 3. Prepare Your Data
-
-Place these three CSV files in the project directory:
-
-- `Team_Names_and_Locations.csv`
-- `Event_Names_and_IDs.csv`
-- `Team_Attendance_By_Date.csv`
-
-### 4. Configure API Key
-
-Edit `calculate_distances.js` and replace `YOUR_API_KEY_HERE` with your Google Maps API key:
-
-```javascript
-const CONFIG = {
-  GOOGLE_MAPS_API_KEY: 'your-actual-api-key-here',
-  // ...
-};
-```
-
-### 5. Generate Distance Data
-
-```bash
-node calculate_distances.js
-```
-
-This will create `wscl_distance_data.json` (takes 5-10 minutes).
-
-### 6. Launch Dashboard
-
-```bash
+git clone https://github.com/AndrewHoehn/WSCL_Distance_Tracker_By_Participation.git
+cd WSCL_Distance_Tracker_By_Participation
 python3 -m http.server 8000
 ```
+Open `http://localhost:8000/wscl_dashboard_v2.html`
 
-Open your browser to: `http://localhost:8000/wscl_dashboard.html`
+## Dashboard Tabs
 
-Or host it somewhere on the internet. 
+**Team Leaderboard** — All teams ranked by total vehicle-miles driven. Filter by season, toggle between actual attendance and theoretical (every team at every race).
 
-## 📦 Installation
+**Venue Analysis** — Which race venues keep everyone closest? Toggle between theoretical centrality and actual miles driven. Drill into individual venues for team-by-team breakdowns.
 
-### Detailed Setup
+**Team Deep Dive** — Select a team to see race-by-race travel, per-family cost by season, and venue distance rankings. Upcoming scheduled races are shown with projected distances.
 
-1. **Install Node.js packages:**
+**Awards** — Per-race and season-long awards: Long Haul (farthest drive), Home Turf (shortest), Odyssey (most cumulative miles), Trailblazer (biggest single-race commitment).
 
-```bash
-npm install papaparse axios
-```
+**Cost Analysis** — What it costs one family to attend every race in a season, ranked by team. Uses the IRS mileage rate ($0.725/mile). Includes upcoming scheduled races as projections.
 
-2. **Set up Google Maps API:**
-   - Go to [Google Cloud Console](https://console.cloud.google.com/)
-   - Create a new project (or use existing)
-   - Enable "Geocoding API" and "Distance Matrix API"
-   - Create credentials → API Key
-   - Copy your API key
+**Methodology** — How the data is collected, how miles are calculated, key assumptions.
 
-3. **Configure the geocoding script:**
+## Adding New Race Data
 
-```javascript
-// In calculate_distances.js
-const CONFIG = {
-  GOOGLE_MAPS_API_KEY: 'YOUR_API_KEY',
-  RIDERS_PER_VEHICLE: 2,
-  BOUNDS: {
-    southwest: { lat: 41.9, lng: -125.0 },
-    northeast: { lat: 49.0, lng: -116.0 }
-  }
-};
-```
+After each race, update the dashboard with new results:
 
-## 📖 Usage
-
-### Running the Geocoding Script
-
-The script processes data in five steps:
+### 1. Scrape race results
 
 ```bash
-node calculate_distances.js
+# For a race already registered in race_events.json:
+python3 scrape_race_results.py --date 2026-04-26
+
+# For a new race (get event-id and key from browser Network tab):
+python3 scrape_race_results.py --date 2026-04-26 --event-id 412345 --key abc123 \
+    --city "Cle Elum" --state WA --venue "Roslyn High School"
+
+# Dry run (preview without writing):
+python3 scrape_race_results.py --date 2026-04-26 --dry-run
 ```
 
-**What it does:**
-1. Geocodes all team home locations (skips "Independent")
-2. Geocodes all event venues
-3. Calculates distances between teams and venues
-4. Combines with attendance data
-5. Generates `wscl_distance_data.json`
+The scraper fetches results from the raceresult.com API, normalizes team names using `team_name_map.json`, and updates the CSV files.
 
-**Output:**
-```
-✓ Data saved to wscl_distance_data.json
+### 2. Update distance data
 
-=== SUMMARY ===
-Teams geocoded: 27
-Events geocoded: 20
-Travel records: 450
-Independent rider records: 15
-Total miles traveled: 125,432 miles
+```bash
+# Set your Google Maps API key (only needed for new teams or venues):
+export GOOGLE_MAPS_API_KEY="your-key-here"
+
+# Patch the distance data (only makes API calls for truly new data):
+python3 patch_distance_data.py
 ```
 
-### Updating Data
+This updates `wscl_distance_data.json` and regenerates `wscl_distance_data.js`. For existing venues, distances are copied from prior races — no API calls needed.
 
-When you get new race attendance or add new events:
+### 3. Refresh the dashboard
 
-1. Update the appropriate CSV file(s)
-2. Re-run the geocoding script
-3. Refresh the dashboard
+Just reload the page. The dashboard reads from the JSON file.
 
-The script will recalculate everything with the new data.
+## Project Files
 
-### Dashboard Controls
+| File | Purpose |
+|------|---------|
+| `wscl_dashboard_v2.html` | The dashboard (single-file React app) |
+| `wscl_distance_data.json` | All computed distances and travel records |
+| `wscl_distance_data.js` | JS wrapper for file:// access (same data) |
+| `scrape_race_results.py` | Scrapes race results from WSCL website |
+| `patch_distance_data.py` | Updates distance data with new races/teams |
+| `team_name_map.json` | Maps raceresult.com team names to canonical names |
+| `race_events.json` | Registry of known race event IDs for the scraper |
+| `Event_Names_and_IDs.csv` | Race events with venues and dates |
+| `Team_Names_and_Locations.csv` | Team home cities and ZIP codes |
+| `Team_Attendance_By_Date.csv` | Rider counts per team per race |
+| `calculate_distances.js` | Original full geocoding script (re-geocodes everything) |
 
-**Season Filter:**
-- All Time (Since 2023)
-- Spring [Year] (March-June)
-- Fall [Year] (September-October)
+## Data Coverage
 
-**View Modes:**
-- **Actual**: Based on riders who actually attended
-- **Theoretical**: Assumes each team sent 1 vehicle to every race
+- **Teams:** 28 (across Washington and Idaho)
+- **Races:** 2023 Spring through 2026 Spring (ongoing)
+- **Distances:** Google Maps driving routes (not straight lines)
+- **Cost rate:** IRS standard mileage rate, $0.725/mile (2025)
 
-**Metric Modes:**
-- **Total Miles**: Sum of all miles traveled
-- **Avg per Entry**: Distance per individual race entry
+## Key Assumptions
 
-**Riders per Vehicle:**
-- Adjustable (1-10)
-- Only affects "Total Miles" calculations
-- Disabled for "Avg per Entry" view
+- All riders on a team travel from the team's home city
+- Default carpooling: 2 riders per vehicle (adjustable in dashboard)
+- Distances are Google Maps driving routes, not actual routes driven
+- Independent riders are tracked for attendance but not travel
+- Future/upcoming races use distances from prior events at the same venue
 
-## 📊 Data Structure
+## Acknowledgments
 
-### Input Files
-
-#### Team_Names_and_Locations.csv
-```csv
-team,city,state,zip
-Anacortes Composite,Anacortes,WA,98221
-Bainbridge Island,Bainbridge Island,WA,98110
-```
-
-#### Event_Names_and_IDs.csv
-```csv
-location_key,city,state,venue,event_date,event_id
-GigHarbor,Gig Harbor,WA,360 Trails,2023-04-16,2023-04-16_GigHarbor_360Trails
-```
-
-#### Team_Attendance_By_Date.csv
-```csv
-race_date_iso,team,riders
-2023-04-16,Anacortes Composite,30
-2023-04-16,Bainbridge Island,21
-```
-
-### Output File
-
-The script generates `wscl_distance_data.json`:
-
-```json
-{
-  "metadata": {
-    "generated_at": "2025-10-02T10:30:00.000Z",
-    "riders_per_vehicle": 2,
-    "total_teams": 27,
-    "total_events": 20
-  },
-  "team_locations": { /* geocoded coordinates */ },
-  "event_locations": { /* geocoded coordinates */ },
-  "distances": { /* calculated distances */ },
-  "travel_data": [ /* actual attendance with distances */ ],
-  "independent_data": [ /* independent rider counts */ ]
-}
-```
-
-## 🧮 Methodology
-
-### Distance Calculations
-
-**One-Way Distance:**
-```
-Google Maps Distance Matrix API
-Mode: Driving
-From: Team home base (city, state, zip)
-To: Event venue or city
-```
-
-**Round-Trip Distance:**
-```
-Round-trip = One-way × 2
-```
-
-**Total Miles (Actual Mode):**
-```
-Vehicles = ROUNDUP(Race Entries ÷ Riders per Vehicle)
-Total Miles = Round-trip Distance × Vehicles
-```
-
-**Average Miles per Entry:**
-```
-Each race entry = Round-trip Distance
-(Regardless of carpooling, each rider travels the full distance)
-```
-
-### Season Definitions
-
-- **Spring**: March 1 - June 30
-- **Fall**: September 1 - October 31
-
-### Geographic Scope
-
-All geocoding is bounded to:
-- **Southwest**: 41.9°N, -125.0°W
-- **Northeast**: 49.0°N, -116.0°W
-
-This covers Washington, Idaho, and northern Oregon.
-
-### Key Assumptions
-
-1. All riders travel from their team's home base
-2. Carpooling efficiency is consistent across teams
-3. Routes follow Google Maps driving directions
-4. Independent riders have no fixed location (not tracked for travel)
-
-### Limitations
-
-- Distances assume direct routes via Google Maps
-- Travel times are estimates without real-time traffic
-- Does not account for riders living far from team home base
-- Carpooling rates may vary by race and team
-- Does not include racers who attend a race, but do not race
-- Does not include data from the coaches race, or the Cle Elum relay 
-
-## 🔄 Updating for New Seasons
-
-### Adding New Races
-
-1. **Update Event_Names_and_IDs.csv:**
-   ```csv
-   NewVenue,City,WA,Venue Name,2026-04-15,2026-04-15_City_VenueName
-   ```
-
-2. **Run geocoding script:**
-   ```bash
-   node calculate_distances.js
-   ```
-
-3. **Dashboard automatically shows new races** as "theoretical" until attendance is added
-
-### Adding Attendance Data
-
-1. **Update Team_Attendance_By_Date.csv:**
-   ```csv
-   2026-04-15,Team Name,25
-   ```
-
-2. **Re-run geocoding script**
-
-3. **Dashboard updates with actual travel data**
-
-## 🛠️ Customization
-
-### Adjusting Geographic Bounds
-
-Edit `calculate_distances.js`:
-
-```javascript
-BOUNDS: {
-  southwest: { lat: YOUR_LAT, lng: YOUR_LNG },
-  northeast: { lat: YOUR_LAT, lng: YOUR_LNG }
-}
-```
-
-### Changing Default Riders per Vehicle
-
-```javascript
-RIDERS_PER_VEHICLE: 3, // Change from 2 to 3
-```
-
-### Adjusting API Rate Limits
-
-```javascript
-RATE_LIMIT_DELAY: 200, // Increase delay between API calls (ms)
-```
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-### Development Setup
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-### Code Style
-
-- Use meaningful variable names
-- Comment complex calculations
-- Follow existing formatting patterns
-- Test with real data before submitting
-
-## 🙏 Acknowledgments
-
-- Washington Student Cycling League for the race data (and for running a great cycling league)
+- Washington Student Cycling League for running a great league
 - Google Maps Platform for geocoding and distance APIs
 - All the volunteer coaches and families who make WSCL possible
 
-### Known Issues
-
-- Date matching requires ±2 day window (minor discrepancies in date recording)
-- Very large datasets (100+ teams, 50+ events) may slow down initial geocoding
-
 ---
 
-**Built with ❤️ for the Washington Student Cycling League**
+**Built by a WSCL parent who wanted to know what all that windshield time actually adds up to.**

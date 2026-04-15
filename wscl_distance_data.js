@@ -1,4 +1,4 @@
-{
+window.__WSCL_DATA__ = {
   "metadata": {
     "generated_at": "2026-04-15T00:00:00.000Z",
     "riders_per_vehicle": 2,
@@ -14274,4 +14274,4 @@
       "season": "Spring 2026"
     }
   ]
-}
+};

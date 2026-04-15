@@ -1,0 +1,24 @@
+# Dependencies
+.venv/
+venv/
+node_modules/
+package-lock.json
+
+# Generated/cached files
+route_cache.json
+heatmaps/
+
+# Old dashboard versions
+wscl_dashboard_events*.html
+
+# Files with hardcoded API keys
+generate_heatmaps.py
+build_route_lines.py
+
+# System files
+.DS_Store
+.claude/
+
+# Python
+__pycache__/
+*.pyc
