@@ -3,7 +3,30 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WSCL Travel Distance Dashboard</title>
+
+  <title>WSCL Travel Tracker — Washington Student Cycling League Distance & Routes</title>
+  <meta name="description" content="Interactive tracker for Washington Student Cycling League travel. Watch animated maps of every team converging on every race venue since 2023, with distance stats, per-family costs, and venue-by-venue breakdowns.">
+  <meta name="author" content="Andrew Hoehn">
+  <meta name="robots" content="index, follow">
+  <meta name="theme-color" content="#238636">
+  <link rel="canonical" href="https://wscltracker.com/">
+
+  <!-- Favicon: 🚴 rendered as SVG -->
+  <link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🚴</text></svg>'>
+  <link rel="apple-touch-icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🚴</text></svg>'>
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://wscltracker.com/">
+  <meta property="og:title" content="WSCL Travel Tracker">
+  <meta property="og:description" content="Watch Washington Student Cycling League teams converge on every race venue in animated maps. Real drive-time animations, distance stats, and per-family cost breakdowns since 2023.">
+  <meta property="og:site_name" content="WSCL Tracker">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="WSCL Travel Tracker">
+  <meta name="twitter:description" content="Watch Washington Student Cycling League teams converge on every race venue in animated maps. Real drive-time animations, distance stats, and per-family cost breakdowns since 2023.">
+
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -386,6 +409,18 @@
             )}
 
             {activeTab === 'methodology' && <MethodologyView />}
+
+            {/* Footer */}
+            <footer className="mt-8 pb-4 text-center text-xs text-gray-500">
+              <p>
+                Built by <a href="https://github.com/AndrewHoehn" className="text-blue-600 hover:underline" target="_blank" rel="noopener">Andrew Hoehn</a>.
+                {' '}If you liked this, check out{' '}
+                <a href="https://williflypuw.com/" className="text-blue-600 hover:underline" target="_blank" rel="noopener">
+                  ✈️ Will I Fly PUW
+                </a>
+                {' '}— flight cancellation predictions for the Moscow / Pullman airport.
+              </p>
+            </footer>
           </div>
         </div>
       );
