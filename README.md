@@ -10,7 +10,7 @@ A leaderboard for the unglamorous, pre-dawn, gas-station-coffee half of the Wash
 
 ## Why this exists
 
-A few of us were sitting around a campfire at a race weekend trying to settle an argument: whose team drives the furthest? Everyone had a candidate. Everyone was sure they were right. Nobody had any numbers.
+A few of us were sitting around a campfire at a race weekend when somebody asked: so who actually drives the furthest to get to these? Everyone had a theory. Everyone had a candidate. Nobody had any numbers.
 
 So here's the numbers.
 
