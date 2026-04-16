@@ -87,7 +87,13 @@
         );
       }
 
-      const seasons = ['all', ...new Set(data.travel_data.map(r => r.season))].sort().reverse();
+      // Sort seasons chronologically: Spring < Fall within a year, newest first
+      const seasonSortKey = s => {
+        const m = s.match(/(Spring|Fall)\s+(\d{4})/);
+        if (!m) return -Infinity;
+        return parseInt(m[2]) * 2 + (m[1] === 'Fall' ? 1 : 0);
+      };
+      const seasons = ['all', ...[...new Set(data.travel_data.map(r => r.season))].sort((a, b) => seasonSortKey(b) - seasonSortKey(a))];
 
       return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 p-4 md:p-8">
@@ -458,11 +464,11 @@
             </div>
             
             <div className="bg-white rounded-lg shadow-lg p-4 md:p-6">
-              <div className="text-xs md:text-sm text-gray-500 mb-1">Independent</div>
+              <div className="text-xs md:text-sm text-gray-500 mb-1">Est. Driving Cost</div>
               <div className="text-xl md:text-3xl font-bold text-orange-600">
-                {totalIndependentEntries.toLocaleString()}
+                ${(totalMiles * 0.725).toLocaleString(undefined, { maximumFractionDigits: 0 })}
               </div>
-              <div className="text-xs text-gray-500 mt-1">No travel</div>
+              <div className="text-xs text-gray-500 mt-1">At $0.725/mi</div>
             </div>
             
             <div className="bg-white rounded-lg shadow-lg p-4 md:p-6">
@@ -625,13 +631,13 @@
         const firstEventDate = venue.events[0]?.date;
 
         if (venueCompareMode === 'actual') {
-          // Actual: total vehicle-miles driven to this venue, averaged per race
+          // Actual: average round-trip miles per team that actually attended
           const venueRecords = data.travel_data.filter(r => r.city === venue.city && r.venue === venue.venue);
           const completedDates = new Set(venueRecords.map(r => r.date));
           const raceCount = completedDates.size;
-          const totalActualMiles = venueRecords.reduce((sum, r) => sum + r.total_miles_traveled, 0);
-          const avgMiles = raceCount > 0 ? totalActualMiles / raceCount : 0;
-          return { name: venueKey, venue: venue.venue, totalMiles: totalActualMiles, avgMiles, raceCount };
+          const totalRoundTripMiles = venueRecords.reduce((sum, r) => sum + r.round_trip_miles, 0);
+          const avgMiles = venueRecords.length > 0 ? totalRoundTripMiles / venueRecords.length : 0;
+          return { name: venueKey, venue: venue.venue, totalMiles: totalRoundTripMiles, avgMiles, raceCount };
         } else {
           // Theoretical: avg round-trip if every team attended
           let totalMiles = 0;
@@ -660,7 +666,7 @@
                 <p className="text-sm text-gray-500">
                   {venueCompareMode === 'theoretical'
                     ? 'Average round-trip miles per team if every team attended. Lower = more centrally located.'
-                    : 'Average total vehicle-miles actually driven per race at each venue.'}
+                    : 'Average round-trip miles per team that actually attended. Lower = closer for real attendees.'}
                 </p>
               </div>
               <div className="flex rounded-lg border border-gray-300 overflow-hidden text-sm shrink-0">
@@ -692,7 +698,7 @@
                         style={{ width: `${Math.max(pct, 15)}%` }}
                       >
                         <span className="text-white font-semibold text-xs">
-                          {v.avgMiles.toLocaleString(undefined, { maximumFractionDigits: 0 })} {venueCompareMode === 'theoretical' ? 'mi avg' : 'mi/race'}
+                          {v.avgMiles.toLocaleString(undefined, { maximumFractionDigits: 0 })} mi avg
                         </span>
                       </div>
                     </div>
@@ -882,7 +888,13 @@
       });
       const seasonCostList = Object.entries(seasonCosts)
         .map(([season, s]) => ({ season, miles: s.miles, cost: s.miles * COST_PER_MILE, races: s.races }))
-        .sort((a, b) => b.season.localeCompare(a.season));
+        .sort((a, b) => {
+          const key = s => {
+            const m = s.match(/(Spring|Fall)\s+(\d{4})/);
+            return m ? parseInt(m[2]) * 2 + (m[1] === 'Fall' ? 1 : 0) : -Infinity;
+          };
+          return key(b.season) - key(a.season);
+        });
       const totalTheoreticalMiles = allDistances.reduce((sum, d) => sum + d.roundTripMiles, 0);
       const totalTheoreticalCost = totalTheoreticalMiles * COST_PER_MILE;
 

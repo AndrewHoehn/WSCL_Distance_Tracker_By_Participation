@@ -1,10 +1,1681 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta http-equiv="refresh" content="0; url=wscl_dashboard_v2.html">
-  <title>WSCL Travel Distance Tracker</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WSCL Travel Distance Dashboard</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body>
-  <p>Redirecting to <a href="wscl_dashboard_v2.html">WSCL Travel Distance Tracker</a>...</p>
+  <div id="root"></div>
+
+  <!-- Load data as JS variable (works with file:// URLs unlike fetch) -->
+  <script src="wscl_distance_data.js" onerror="console.log('No JS data file found, will try fetch')"></script>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    function WSCLDashboard() {
+      const [data, setData] = useState(null);
+      const [loading, setLoading] = useState(true);
+      const [error, setError] = useState(null);
+      const [activeTab, setActiveTab] = useState('leaderboard');
+      const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+      
+      // Filters
+      const [seasonFilter, setSeasonFilter] = useState('all');
+      const [viewMode, setViewMode] = useState('actual');
+      const [metricMode, setMetricMode] = useState('total');
+      const [ridersPerVehicle, setRidersPerVehicle] = useState(2);
+      
+      // Venue view filters
+      const [selectedVenue, setSelectedVenue] = useState('');
+      const [selectedEventDate, setSelectedEventDate] = useState('');
+      
+      // Team view filters
+      const [selectedTeam, setSelectedTeam] = useState('');
+
+      useEffect(() => {
+        // Try fetch first (works when served via HTTP)
+        // Falls back to embedded data (works when opened as file://)
+        fetch('wscl_distance_data.json', {cache: 'no-store'})
+          .then(response => {
+            if (!response.ok) throw new Error('fetch failed');
+            return response.json();
+          })
+          .then(jsonData => {
+            setData(jsonData);
+            setLoading(false);
+          })
+          .catch(() => {
+            if (window.__WSCL_DATA__) {
+              setData(window.__WSCL_DATA__);
+              setLoading(false);
+            } else {
+              setError('Data file not found. Make sure wscl_distance_data.json is in the same folder, or serve via a local web server.');
+              setLoading(false);
+            }
+          });
+      }, []);
+
+      if (loading) {
+        return (
+          <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 flex items-center justify-center">
+            <div className="text-center">
+              <div className="text-6xl mb-4">🚴</div>
+              <div className="text-xl font-semibold text-gray-700">Loading WSCL Data...</div>
+            </div>
+          </div>
+        );
+      }
+
+      if (error) {
+        return (
+          <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-lg shadow-lg p-8 max-w-md">
+              <div className="text-4xl mb-4">⚠️</div>
+              <h2 className="text-xl font-bold text-red-600 mb-2">Data Not Found</h2>
+              <p className="text-gray-700 mb-4">{error}</p>
+              <p className="text-sm text-gray-600">
+                Make sure wscl_distance_data.json is in the same folder as this HTML file.
+              </p>
+            </div>
+          </div>
+        );
+      }
+
+      // Sort seasons chronologically: Spring < Fall within a year, newest first
+      const seasonSortKey = s => {
+        const m = s.match(/(Spring|Fall)\s+(\d{4})/);
+        if (!m) return -Infinity;
+        return parseInt(m[2]) * 2 + (m[1] === 'Fall' ? 1 : 0);
+      };
+      const seasons = ['all', ...[...new Set(data.travel_data.map(r => r.season))].sort((a, b) => seasonSortKey(b) - seasonSortKey(a))];
+
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 p-4 md:p-8">
+          <div className="max-w-7xl mx-auto">
+            {/* Header */}
+            <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+              <div className="flex items-center justify-between flex-wrap gap-4">
+                <div>
+                  <h1 className="text-3xl font-bold text-gray-800 mb-1">
+                    🚴 WSCL Travel Distance Tracker
+                  </h1>
+                  <p className="text-gray-600">Washington Student Cycling League</p>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm text-gray-500">Last Updated</div>
+                  <div className="text-lg font-semibold text-gray-700">
+                    {new Date(data.metadata.generated_at).toLocaleDateString()}
+                  </div>
+                </div>
+              </div>
+              <p className="text-sm text-gray-500 mt-3 border-t pt-3">
+                WSCL teams log serious miles getting to races across Washington and Idaho. This dashboard tracks every mile driven since 2023 — who's racking up the road trips, which venues keep everyone close (or don't), and what all that windshield time actually costs.
+              </p>
+            </div>
+
+            {/* Navigation Tabs */}
+            <div className="bg-white rounded-lg shadow-lg mb-6">
+              {/* Mobile Menu Button */}
+              <div className="md:hidden border-b p-4">
+                <button
+                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                  className="w-full flex items-center justify-between text-left font-semibold text-gray-800"
+                >
+                  <span className="flex items-center gap-2">
+                    {activeTab === 'leaderboard' && '📊 Team Leaderboard'}
+                    {activeTab === 'venues' && '📍 Venue Analysis'}
+                    {activeTab === 'teams' && '👥 Team Deep Dive'}
+                    {activeTab === 'awards' && '🏆 Awards'}
+                    {activeTab === 'costs' && '💰 Cost Analysis'}
+                    {activeTab === 'methodology' && '📖 Methodology'}
+                  </span>
+                  <span className="text-xl">{mobileMenuOpen ? '×' : '☰'}</span>
+                </button>
+              </div>
+
+              {/* Mobile Menu */}
+              {mobileMenuOpen && (
+                <div className="md:hidden border-b">
+                  <button
+                    onClick={() => {
+                      setActiveTab('leaderboard');
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`w-full text-left px-6 py-4 font-semibold transition-colors ${
+                      activeTab === 'leaderboard'
+                        ? 'bg-blue-50 text-blue-600'
+                        : 'text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    📊 Team Leaderboard
+                  </button>
+                  <button
+                    onClick={() => {
+                      setActiveTab('venues');
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`w-full text-left px-6 py-4 font-semibold transition-colors ${
+                      activeTab === 'venues'
+                        ? 'bg-blue-50 text-blue-600'
+                        : 'text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    📍 Venue Analysis
+                  </button>
+                  <button
+                    onClick={() => {
+                      setActiveTab('teams');
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`w-full text-left px-6 py-4 font-semibold transition-colors ${
+                      activeTab === 'teams'
+                        ? 'bg-blue-50 text-blue-600'
+                        : 'text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    👥 Team Deep Dive
+                  </button>
+                  <button
+                    onClick={() => {
+                      setActiveTab('awards');
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`w-full text-left px-6 py-4 font-semibold transition-colors ${
+                      activeTab === 'awards'
+                        ? 'bg-blue-50 text-blue-600'
+                        : 'text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    🏆 Awards
+                  </button>
+                  <button
+                    onClick={() => {
+                      setActiveTab('costs');
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`w-full text-left px-6 py-4 font-semibold transition-colors ${
+                      activeTab === 'costs'
+                        ? 'bg-blue-50 text-blue-600'
+                        : 'text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    💰 Cost Analysis
+                  </button>
+                  <button
+                    onClick={() => {
+                      setActiveTab('methodology');
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`w-full text-left px-6 py-4 font-semibold transition-colors ${
+                      activeTab === 'methodology'
+                        ? 'bg-blue-50 text-blue-600'
+                        : 'text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    📖 Methodology
+                  </button>
+                </div>
+              )}
+
+              {/* Desktop Tabs */}
+              <div className="hidden md:flex border-b">
+                <button
+                  onClick={() => setActiveTab('leaderboard')}
+                  className={`px-6 py-4 font-semibold transition-colors ${
+                    activeTab === 'leaderboard'
+                      ? 'text-blue-600 border-b-2 border-blue-600'
+                      : 'text-gray-600 hover:text-gray-800'
+                  }`}
+                >
+                  📊 Team Leaderboard
+                </button>
+                <button
+                  onClick={() => setActiveTab('venues')}
+                  className={`px-6 py-4 font-semibold transition-colors ${
+                    activeTab === 'venues'
+                      ? 'text-blue-600 border-b-2 border-blue-600'
+                      : 'text-gray-600 hover:text-gray-800'
+                  }`}
+                >
+                  📍 Venue Analysis
+                </button>
+                <button
+                  onClick={() => setActiveTab('teams')}
+                  className={`px-6 py-4 font-semibold transition-colors ${
+                    activeTab === 'teams'
+                      ? 'text-blue-600 border-b-2 border-blue-600'
+                      : 'text-gray-600 hover:text-gray-800'
+                  }`}
+                >
+                  👥 Team Deep Dive
+                </button>
+                <button
+                  onClick={() => setActiveTab('awards')}
+                  className={`px-6 py-4 font-semibold transition-colors ${
+                    activeTab === 'awards'
+                      ? 'text-blue-600 border-b-2 border-blue-600'
+                      : 'text-gray-600 hover:text-gray-800'
+                  }`}
+                >
+                  🏆 Awards
+                </button>
+                <button
+                  onClick={() => setActiveTab('costs')}
+                  className={`px-6 py-4 font-semibold transition-colors ${
+                    activeTab === 'costs'
+                      ? 'text-blue-600 border-b-2 border-blue-600'
+                      : 'text-gray-600 hover:text-gray-800'
+                  }`}
+                >
+                  💰 Cost Analysis
+                </button>
+                <button
+                  onClick={() => setActiveTab('methodology')}
+                  className={`px-6 py-4 font-semibold transition-colors ${
+                    activeTab === 'methodology'
+                      ? 'text-blue-600 border-b-2 border-blue-600'
+                      : 'text-gray-600 hover:text-gray-800'
+                  }`}
+                >
+                  📖 Methodology
+                </button>
+              </div>
+            </div>
+
+            {/* Tab Content */}
+            {activeTab === 'leaderboard' && (
+              <LeaderboardView 
+                data={data}
+                seasonFilter={seasonFilter}
+                setSeasonFilter={setSeasonFilter}
+                viewMode={viewMode}
+                setViewMode={setViewMode}
+                metricMode={metricMode}
+                setMetricMode={setMetricMode}
+                ridersPerVehicle={ridersPerVehicle}
+                setRidersPerVehicle={setRidersPerVehicle}
+                seasons={seasons}
+              />
+            )}
+
+            {activeTab === 'venues' && (
+              <VenueView
+                data={data}
+                selectedVenue={selectedVenue}
+                setSelectedVenue={setSelectedVenue}
+                selectedEventDate={selectedEventDate}
+                setSelectedEventDate={setSelectedEventDate}
+              />
+            )}
+
+            {activeTab === 'teams' && (
+              <TeamView
+                data={data}
+                selectedTeam={selectedTeam}
+                setSelectedTeam={setSelectedTeam}
+                ridersPerVehicle={ridersPerVehicle}
+              />
+            )}
+
+            {activeTab === 'awards' && (
+              <AwardsView data={data} seasons={seasons} onTeamClick={(team) => { setSelectedTeam(team); setActiveTab('teams'); }} />
+            )}
+
+            {activeTab === 'costs' && (
+              <CostAnalysisView data={data} seasons={seasons} />
+            )}
+
+            {activeTab === 'methodology' && <MethodologyView />}
+          </div>
+        </div>
+      );
+    }
+
+    // LEADERBOARD VIEW
+    function LeaderboardView({ data, seasonFilter, setSeasonFilter, viewMode, setViewMode, metricMode, setMetricMode, ridersPerVehicle, setRidersPerVehicle, seasons }) {
+      const filteredData = data.travel_data.filter(record => {
+        if (seasonFilter === 'all') return true;
+        return record.season === seasonFilter;
+      });
+
+      const filteredIndependent = (data.independent_data || []).filter(record => {
+        if (seasonFilter === 'all') return true;
+        return record.season === seasonFilter;
+      });
+
+      const leaderboard = calculateLeaderboard(filteredData, data, viewMode, metricMode, ridersPerVehicle);
+
+      const totalMiles = leaderboard.reduce((sum, team) => sum + team.miles, 0);
+      const totalRaceEntries = filteredData.reduce((sum, r) => sum + r.riders, 0);
+      const totalIndependentEntries = filteredIndependent.reduce((sum, r) => sum + r.riders, 0);
+      const totalEvents = new Set(filteredData.map(r => r.date)).size;
+
+      return (
+        <>
+          {/* Filters */}
+          <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <h2 className="text-xl font-bold text-gray-800 mb-4">Filters & Settings</h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Season</label>
+                <select
+                  value={seasonFilter}
+                  onChange={(e) => setSeasonFilter(e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  {seasons.map(season => (
+                    <option key={season} value={season}>
+                      {season === 'all' ? 'All Time (Since 2023)' : season}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  View Mode
+                  <span className="ml-1 text-xs text-gray-500 font-normal">ⓘ</span>
+                </label>
+                <select
+                  value={viewMode}
+                  onChange={(e) => setViewMode(e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  title="Actual: Based on riders who attended. Theoretical: If each team sent 1 vehicle to every race."
+                >
+                  <option value="actual">Actual (Based on Attendance)</option>
+                  <option value="theoretical">Theoretical (One Vehicle/Team)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Metric
+                  <span className="ml-1 text-xs text-gray-500 font-normal">ⓘ</span>
+                </label>
+                <select
+                  value={metricMode}
+                  onChange={(e) => setMetricMode(e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  title="Total: Sum of all miles. Per Entry: Round-trip distance per race entry."
+                >
+                  <option value="total">Total Miles</option>
+                  <option value="per_rider">Avg Miles per Race Entry</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Riders per Vehicle
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={ridersPerVehicle}
+                  onChange={(e) => setRidersPerVehicle(Number(e.target.value))}
+                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  disabled={metricMode === 'per_rider'}
+                />
+                {metricMode === 'per_rider' && (
+                  <div className="text-xs text-gray-500 mt-1">
+                    N/A for averages
+                  </div>
+                )}
+              </div>
+
+            
+
+            {/* Metric Explanation */}
+            {metricMode === 'per_rider' && viewMode === 'actual' && (
+              <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <p className="text-sm text-gray-700">
+                  <strong>Average Miles & Time per Race Entry:</strong> Each race entry represents one rider's round-trip 
+                  distance and travel time to the venue. The "Riders per Vehicle" setting only affects total miles calculations, 
+                  not averages, since each rider travels the same distance regardless of carpooling.
+                </p>
+              </div>
+            )}
+          </div>
+          </div>
+
+          {/* Summary Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
+            <div className="bg-white rounded-lg shadow-lg p-4 md:p-6">
+              <div className="text-xs md:text-sm text-gray-500 mb-1">Total Miles</div>
+              <div className="text-xl md:text-3xl font-bold text-blue-600">
+                {totalMiles.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+              </div>
+              <div className="text-xs text-gray-500 mt-1">Round-trip</div>
+            </div>
+            
+            <div className="bg-white rounded-lg shadow-lg p-4 md:p-6">
+              <div className="text-xs md:text-sm text-gray-500 mb-1">Rider-Races</div>
+              <div className="text-xl md:text-3xl font-bold text-green-600">
+                {totalRaceEntries.toLocaleString()}
+              </div>
+              <div className="text-xs text-gray-500 mt-1">League teams</div>
+            </div>
+            
+            <div className="bg-white rounded-lg shadow-lg p-4 md:p-6">
+              <div className="text-xs md:text-sm text-gray-500 mb-1">Est. Driving Cost</div>
+              <div className="text-xl md:text-3xl font-bold text-orange-600">
+                ${(totalMiles * 0.725).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+              </div>
+              <div className="text-xs text-gray-500 mt-1">At $0.725/mi</div>
+            </div>
+            
+            <div className="bg-white rounded-lg shadow-lg p-4 md:p-6">
+              <div className="text-xs md:text-sm text-gray-500 mb-1">Events</div>
+              <div className="text-xl md:text-3xl font-bold text-purple-600">{totalEvents}</div>
+              <div className="text-xs text-gray-500 mt-1">Race dates</div>
+            </div>
+          </div>
+
+          {/* Leaderboard Table */}
+          <div className="bg-white rounded-lg shadow-lg p-4 md:p-6 mb-6">
+            <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-1">Who's Logging the Most Miles?</h2>
+            <p className="text-sm text-gray-500 mb-4">Teams ranked by total driving distance. Spoiler: geography is not equally distributed.</p>
+            
+            <div className="overflow-x-auto -mx-4 md:mx-0">
+              <table className="w-full min-w-[600px]">
+                <thead>
+                  <tr className="border-b-2 border-gray-200">
+                    <th className="text-left py-2 md:py-3 px-2 md:px-4 font-semibold text-gray-700 text-sm md:text-base">Rank</th>
+                    <th className="text-left py-2 md:py-3 px-2 md:px-4 font-semibold text-gray-700 text-sm md:text-base">Team</th>
+                    <th className="text-right py-2 md:py-3 px-2 md:px-4 font-semibold text-gray-700 text-sm md:text-base">Miles</th>
+                    <th className="text-right py-2 md:py-3 px-2 md:px-4 font-semibold text-gray-700 text-sm md:text-base">Time</th>
+                    <th className="text-right py-2 md:py-3 px-2 md:px-4 font-semibold text-gray-700 text-sm md:text-base">Races</th>
+                    {viewMode === 'actual' && (
+                      <th className="text-right py-2 md:py-3 px-2 md:px-4 font-semibold text-gray-700 text-sm md:text-base" title="Total rider appearances across all races">Rider-Races</th>
+                    )}
+                  </tr>
+                </thead>
+                <tbody>
+                  {leaderboard.map((team, index) => (
+                    <tr key={team.name} className="border-b border-gray-100 hover:bg-gray-50">
+                      <td className="py-2 md:py-3 px-2 md:px-4">
+                        <span className={`font-bold ${index < 3 ? 'text-lg md:text-xl' : 'text-base md:text-lg'}`}>
+                          {index === 0 && '🚗'}
+                          {index === 1 && '🚙'}
+                          {index === 2 && '🛻'}
+                          {index >= 3 && `${index + 1}`}
+                        </span>
+                      </td>
+                      <td className="py-2 md:py-3 px-2 md:px-4 font-medium text-gray-800 text-sm md:text-base">{team.name}</td>
+                      <td className="py-2 md:py-3 px-2 md:px-4 text-right font-semibold text-blue-600 text-sm md:text-base" style={{fontVariantNumeric: 'tabular-nums'}}>
+                        {team.miles.toLocaleString(undefined, { maximumFractionDigits: 0 })} mi
+                      </td>
+                      <td className="py-2 md:py-3 px-2 md:px-4 text-right text-gray-600 text-sm md:text-base" style={{fontVariantNumeric: 'tabular-nums'}}>
+                        {formatTime(team.minutes)}
+                      </td>
+                      <td className="py-2 md:py-3 px-2 md:px-4 text-right text-gray-600 text-sm md:text-base" style={{fontVariantNumeric: 'tabular-nums'}}>{team.races}</td>
+                      {viewMode === 'actual' && (
+                        <td className="py-2 md:py-3 px-2 md:px-4 text-right text-gray-600 text-sm md:text-base" style={{fontVariantNumeric: 'tabular-nums'}}>{team.riders}</td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Visual Chart */}
+          <div className="bg-white rounded-lg shadow-lg p-4 md:p-6 mb-6">
+            <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-4">Road Trip Rankings — Top 15</h2>
+            <div className="space-y-2">
+              {leaderboard.slice(0, 15).map((team, index) => {
+                const maxMiles = leaderboard[0].miles;
+                const percentage = (team.miles / maxMiles) * 100;
+                
+                return (
+                  <div key={team.name} className="flex items-center gap-2 md:gap-3">
+                    <div className="w-24 md:w-32 text-xs md:text-sm font-medium text-gray-700 truncate" title={team.name}>
+                      {team.name}
+                    </div>
+                    <div className="flex-1 bg-gray-200 rounded-full h-6 md:h-8 relative">
+                      <div 
+                        className="bg-blue-500 h-6 md:h-8 rounded-full flex items-center justify-end pr-2 md:pr-3 transition-all duration-500"
+                        style={{ width: `${percentage}%` }}
+                      >
+                        <span className="text-white font-semibold text-xs md:text-sm">
+                          {team.miles.toLocaleString(undefined, { maximumFractionDigits: 0 })} mi
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Heatmap */}
+          <div className="bg-white rounded-lg shadow-lg p-4 md:p-6">
+            <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-4">Travel Heatmap - All Races</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Visualization of all driving routes since 2023. Brighter colors indicate more frequent travel.
+            </p>
+            <div className="rounded-lg overflow-hidden border border-gray-200">
+              <img 
+                src="heatmaps/heatmap_overall.png" 
+                alt="Overall travel heatmap"
+                className="w-full h-auto"
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                  e.target.nextSibling.style.display = 'block';
+                }}
+              />
+              <div style={{ display: 'none' }} className="p-8 text-center text-gray-500">
+                <p>Heatmap not available. Run the Python heatmap generator script to create visualizations.</p>
+              </div>
+            </div>
+          </div>
+        </>
+      );
+    }
+
+    // VENUE VIEW
+    function VenueView({ data, selectedVenue, setSelectedVenue, selectedEventDate, setSelectedEventDate }) {
+      const [venueCompareMode, setVenueCompareMode] = useState('theoretical');
+      // Get unique venues
+      const venues = {};
+      Object.entries(data.event_locations).forEach(([date, event]) => {
+        const venueKey = `${event.city}, ${event.state}`;
+        if (!venues[venueKey]) {
+          venues[venueKey] = {
+            city: event.city,
+            state: event.state,
+            venue: event.venue,
+            events: []
+          };
+        }
+        venues[venueKey].events.push({ date, ...event });
+      });
+
+      const venueList = Object.keys(venues).sort();
+
+      useEffect(() => {
+        if (!selectedVenue && venueList.length > 0) {
+          setSelectedVenue(venueList[0]);
+        }
+      }, [venueList.length]);
+
+      const currentVenue = venues[selectedVenue];
+      const eventsAtVenue = currentVenue?.events || [];
+
+      // Calculate theoretical distances for all teams to this venue
+      const theoreticalDistances = currentVenue ? Object.keys(data.team_locations).map(teamName => {
+        const firstEventDate = eventsAtVenue[0]?.date;
+        const distance = data.distances[teamName]?.[firstEventDate];
+        
+        return {
+          team: teamName,
+          distance: distance?.one_way_miles || 0,
+          roundTrip: distance?.round_trip_miles || 0,
+          time: distance?.round_trip_minutes || 0
+        };
+      }).sort((a, b) => b.roundTrip - a.roundTrip) : [];
+
+      // Get actual attendance if event date selected
+      const actualData = selectedEventDate ? data.travel_data.filter(r => r.event_date === selectedEventDate) : [];
+
+      // Calculate venue impact — theoretical or actual
+      const venueImpact = venueList.map(venueKey => {
+        const venue = venues[venueKey];
+        const firstEventDate = venue.events[0]?.date;
+
+        if (venueCompareMode === 'actual') {
+          // Actual: average round-trip miles per team that actually attended
+          const venueRecords = data.travel_data.filter(r => r.city === venue.city && r.venue === venue.venue);
+          const completedDates = new Set(venueRecords.map(r => r.date));
+          const raceCount = completedDates.size;
+          const totalRoundTripMiles = venueRecords.reduce((sum, r) => sum + r.round_trip_miles, 0);
+          const avgMiles = venueRecords.length > 0 ? totalRoundTripMiles / venueRecords.length : 0;
+          return { name: venueKey, venue: venue.venue, totalMiles: totalRoundTripMiles, avgMiles, raceCount };
+        } else {
+          // Theoretical: avg round-trip if every team attended
+          let totalMiles = 0;
+          let teamCount = 0;
+          Object.keys(data.team_locations).forEach(teamName => {
+            const dist = data.distances[teamName]?.[firstEventDate];
+            if (dist) {
+              totalMiles += dist.round_trip_miles;
+              teamCount++;
+            }
+          });
+          const avgMiles = teamCount > 0 ? totalMiles / teamCount : 0;
+          return { name: venueKey, venue: venue.venue, totalMiles, avgMiles, raceCount: venue.events.length };
+        }
+      }).sort((a, b) => a.avgMiles - b.avgMiles);
+
+      const maxAvgMiles = venueImpact.length > 0 ? venueImpact[venueImpact.length - 1].avgMiles : 1;
+
+      return (
+        <>
+          {/* Venue Impact Comparison */}
+          <div className="bg-white rounded-lg shadow-lg p-4 md:p-6 mb-6">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
+              <div>
+                <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-1">Which Venues Keep Everyone Closest?</h2>
+                <p className="text-sm text-gray-500">
+                  {venueCompareMode === 'theoretical'
+                    ? 'Average round-trip miles per team if every team attended. Lower = more centrally located.'
+                    : 'Average round-trip miles per team that actually attended. Lower = closer for real attendees.'}
+                </p>
+              </div>
+              <div className="flex rounded-lg border border-gray-300 overflow-hidden text-sm shrink-0">
+                <button
+                  onClick={() => setVenueCompareMode('theoretical')}
+                  className={`px-3 py-1.5 font-medium transition-colors ${venueCompareMode === 'theoretical' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                >
+                  Theoretical
+                </button>
+                <button
+                  onClick={() => setVenueCompareMode('actual')}
+                  className={`px-3 py-1.5 font-medium transition-colors ${venueCompareMode === 'actual' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                >
+                  Actual
+                </button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              {venueImpact.map((v, i) => {
+                const pct = (v.avgMiles / maxAvgMiles) * 100;
+                return (
+                  <div key={v.name} className="flex items-center gap-2 md:gap-3">
+                    <div className="w-28 md:w-40 text-xs md:text-sm font-medium text-gray-700 truncate" title={v.name}>
+                      {v.venue}
+                    </div>
+                    <div className="flex-1 bg-gray-200 rounded-full h-6 relative">
+                      <div
+                        className={`h-6 rounded-full flex items-center justify-end pr-2 transition-all duration-500 ${i === 0 ? 'bg-green-500' : i === venueImpact.length - 1 ? 'bg-red-400' : 'bg-blue-400'}`}
+                        style={{ width: `${Math.max(pct, 15)}%` }}
+                      >
+                        <span className="text-white font-semibold text-xs">
+                          {v.avgMiles.toLocaleString(undefined, { maximumFractionDigits: 0 })} mi avg
+                        </span>
+                      </div>
+                    </div>
+                    <div className="w-16 text-xs text-gray-400 text-right">{v.raceCount} race{v.raceCount !== 1 ? 's' : ''}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <h2 className="text-xl font-bold text-gray-800 mb-4">Venue Selection</h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Select Venue</label>
+                <select
+                  value={selectedVenue}
+                  onChange={(e) => {
+                    setSelectedVenue(e.target.value);
+                    setSelectedEventDate('');
+                  }}
+                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  {venueList.map(venue => (
+                    <option key={venue} value={venue}>{venue}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  View Actual Data for Event (Optional)
+                </label>
+                <select
+                  value={selectedEventDate}
+                  onChange={(e) => setSelectedEventDate(e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Theoretical (All Teams)</option>
+                  {eventsAtVenue.map(event => (
+                    <option key={event.date} value={event.date}>
+                      {event.date} - {event.venue}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {currentVenue && (
+            <>
+              <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+                <h2 className="text-2xl font-bold text-gray-800 mb-2">{currentVenue.venue}</h2>
+                <p className="text-gray-600 mb-4">{currentVenue.city}, {currentVenue.state}</p>
+                <div className="text-sm text-gray-600">
+                  <strong>{eventsAtVenue.length}</strong> race(s) held at this venue
+                </div>
+              </div>
+
+              <div className="bg-white rounded-lg shadow-lg p-6">
+                <h2 className="text-xl font-bold text-gray-800 mb-4">
+                  {selectedEventDate ? `Actual Travel - ${selectedEventDate}` : 'Theoretical Travel Distance by Team'}
+                </h2>
+
+                {!selectedEventDate ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b-2 border-gray-200">
+                          <th className="text-left py-3 px-4 font-semibold text-gray-700">Team</th>
+                          <th className="text-right py-3 px-4 font-semibold text-gray-700">One-Way</th>
+                          <th className="text-right py-3 px-4 font-semibold text-gray-700">Round-Trip</th>
+                          <th className="text-right py-3 px-4 font-semibold text-gray-700">Travel Time</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {theoreticalDistances.map(team => (
+                          <tr key={team.team} className="border-b border-gray-100 hover:bg-gray-50">
+                            <td className="py-3 px-4 font-medium text-gray-800">{team.team}</td>
+                            <td className="py-3 px-4 text-right text-gray-600">
+                              {team.distance.toFixed(1)} mi
+                            </td>
+                            <td className="py-3 px-4 text-right font-semibold text-blue-600">
+                              {team.roundTrip.toFixed(1)} mi
+                            </td>
+                            <td className="py-3 px-4 text-right text-gray-600">
+                              {formatTime(team.time)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b-2 border-gray-200">
+                          <th className="text-left py-3 px-4 font-semibold text-gray-700">Team</th>
+                          <th className="text-right py-3 px-4 font-semibold text-gray-700">Entries</th>
+                          <th className="text-right py-3 px-4 font-semibold text-gray-700">Vehicles</th>
+                          <th className="text-right py-3 px-4 font-semibold text-gray-700">Total Miles</th>
+                          <th className="text-right py-3 px-4 font-semibold text-gray-700">Total Time</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {actualData.sort((a, b) => b.total_miles_traveled - a.total_miles_traveled).map(record => (
+                          <tr key={record.team} className="border-b border-gray-100 hover:bg-gray-50">
+                            <td className="py-3 px-4 font-medium text-gray-800">{record.team}</td>
+                            <td className="py-3 px-4 text-right text-gray-600">{record.riders}</td>
+                            <td className="py-3 px-4 text-right text-gray-600">{record.vehicles}</td>
+                            <td className="py-3 px-4 text-right font-semibold text-blue-600">
+                              {record.total_miles_traveled.toLocaleString(undefined, { maximumFractionDigits: 1 })} mi
+                            </td>
+                            <td className="py-3 px-4 text-right text-gray-600">
+                              {formatTime(record.total_minutes_traveled)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </>
+      );
+    }
+
+    // TEAM VIEW
+    function TeamView({ data, selectedTeam, setSelectedTeam, ridersPerVehicle }) {
+      const teamList = Object.keys(data.team_locations).sort();
+
+      useEffect(() => {
+        if (!selectedTeam && teamList.length > 0) {
+          setSelectedTeam(teamList[0]);
+        }
+      }, [teamList.length]);
+
+      const teamData = data.travel_data.filter(r => r.team === selectedTeam);
+      const teamLocation = data.team_locations[selectedTeam];
+      
+      // Calculate statistics
+      const racesAttended = teamData.length;
+      const totalRiders = teamData.reduce((sum, r) => sum + r.riders, 0);
+      const avgRidersPerRace = racesAttended > 0 ? totalRiders / racesAttended : 0;
+      const totalMiles = teamData.reduce((sum, r) => sum + r.total_miles_traveled, 0);
+      const totalMinutes = teamData.reduce((sum, r) => sum + r.total_minutes_traveled, 0);
+      const avgMilesPerRace = racesAttended > 0 ? totalMiles / racesAttended : 0;
+      
+      // Get all theoretical distances for this team
+      const allDistances = Object.entries(data.distances[selectedTeam] || {}).map(([date, dist]) => {
+        const event = data.event_locations[date];
+        const actualAttendance = teamData.find(r => r.event_date === date);
+        
+        return {
+          date,
+          venue: event?.venue,
+          city: event?.city,
+          oneWayMiles: dist.one_way_miles,
+          roundTripMiles: dist.round_trip_miles,
+          roundTripMinutes: dist.round_trip_minutes,
+          attended: !!actualAttendance,
+          riders: actualAttendance?.riders || 0,
+          actualMiles: actualAttendance?.total_miles_traveled || 0,
+          actualMinutes: actualAttendance?.total_minutes_traveled || 0
+        };
+      }).sort((a, b) => new Date(a.date) - new Date(b.date));
+
+      // Calculate theoretical average
+      const avgTheoreticalMiles = allDistances.length > 0 
+        ? allDistances.reduce((sum, d) => sum + d.roundTripMiles, 0) / allDistances.length 
+        : 0;
+
+      // Per-family cost per season (theoretical: if one parent drove to every race)
+      const COST_PER_MILE = 0.725;
+      const seasonCosts = {};
+      allDistances.forEach(d => {
+        const month = parseInt(d.date.split('-')[1]);
+        const year = d.date.split('-')[0];
+        const season = (month >= 3 && month <= 6) ? `Spring ${year}` : (month >= 9 && month <= 10) ? `Fall ${year}` : `Other ${year}`;
+        if (!seasonCosts[season]) seasonCosts[season] = { miles: 0, races: 0 };
+        seasonCosts[season].miles += d.roundTripMiles;
+        seasonCosts[season].races += 1;
+      });
+      const seasonCostList = Object.entries(seasonCosts)
+        .map(([season, s]) => ({ season, miles: s.miles, cost: s.miles * COST_PER_MILE, races: s.races }))
+        .sort((a, b) => {
+          const key = s => {
+            const m = s.match(/(Spring|Fall)\s+(\d{4})/);
+            return m ? parseInt(m[2]) * 2 + (m[1] === 'Fall' ? 1 : 0) : -Infinity;
+          };
+          return key(b.season) - key(a.season);
+        });
+      const totalTheoreticalMiles = allDistances.reduce((sum, d) => sum + d.roundTripMiles, 0);
+      const totalTheoreticalCost = totalTheoreticalMiles * COST_PER_MILE;
+
+      // Venues ranked by distance
+      const venuesByDistance = allDistances
+        .reduce((acc, d) => {
+          const key = `${d.city} - ${d.venue}`;
+          if (!acc.find(v => v.key === key)) {
+            acc.push({
+              key,
+              venue: d.venue,
+              city: d.city,
+              distance: d.roundTripMiles,
+              time: d.roundTripMinutes
+            });
+          }
+          return acc;
+        }, [])
+        .sort((a, b) => b.distance - a.distance);
+
+      return (
+        <>
+          <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <h2 className="text-xl font-bold text-gray-800 mb-4">Select Team</h2>
+            <select
+              value={selectedTeam}
+              onChange={(e) => setSelectedTeam(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            >
+              {teamList.map(team => (
+                <option key={team} value={team}>{team}</option>
+              ))}
+            </select>
+          </div>
+
+          {teamLocation && (
+            <>
+              {/* Team Header */}
+              <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+                <h2 className="text-3xl font-bold text-gray-800 mb-2">{selectedTeam}</h2>
+                <p className="text-gray-600">
+                  {teamLocation.city}, {teamLocation.state} {teamLocation.zip}
+                </p>
+              </div>
+
+              {/* Key Statistics */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
+                <div className="bg-white rounded-lg shadow-lg p-3 md:p-4">
+                  <div className="text-xs text-gray-500 mb-1">Races</div>
+                  <div className="text-xl md:text-2xl font-bold text-purple-600">{racesAttended}</div>
+                </div>
+                
+                <div className="bg-white rounded-lg shadow-lg p-3 md:p-4">
+                  <div className="text-xs text-gray-500 mb-1">Avg/Race</div>
+                  <div className="text-xl md:text-2xl font-bold text-green-600">
+                    {avgRidersPerRace.toLocaleString(undefined, { maximumFractionDigits: 1 })}
+                  </div>
+                </div>
+                
+                <div className="bg-white rounded-lg shadow-lg p-3 md:p-4">
+                  <div className="text-xs text-gray-500 mb-1">Avg Theory</div>
+                  <div className="text-xl md:text-2xl font-bold text-blue-600">
+                    {avgTheoreticalMiles.toLocaleString(undefined, { maximumFractionDigits: 0 })} mi
+                  </div>
+                </div>
+                
+                <div className="bg-white rounded-lg shadow-lg p-3 md:p-4">
+                  <div className="text-xs text-gray-500 mb-1">Avg Actual</div>
+                  <div className="text-xl md:text-2xl font-bold text-orange-600">
+                    {avgMilesPerRace.toLocaleString(undefined, { maximumFractionDigits: 0 })} mi
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-6">
+                <div className="bg-white rounded-lg shadow-lg p-4">
+                  <div className="text-xs text-gray-500 mb-1">Cumulative Distance</div>
+                  <div className="text-2xl md:text-3xl font-bold text-blue-600">
+                    {totalMiles.toLocaleString(undefined, { maximumFractionDigits: 0 })} mi
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">Total miles traveled</div>
+                </div>
+                
+                <div className="bg-white rounded-lg shadow-lg p-4">
+                  <div className="text-xs text-gray-500 mb-1">Cumulative Time</div>
+                  <div className="text-2xl md:text-3xl font-bold text-indigo-600">
+                    {formatTime(totalMinutes)}
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">Total travel time</div>
+                </div>
+              </div>
+
+              {/* Per-Family Travel Cost */}
+              <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-lg shadow-lg p-4 md:p-6 mb-6 border border-emerald-200">
+                <h3 className="text-lg font-bold text-gray-800 mb-1">What Does It Cost a Family?</h3>
+                <p className="text-xs text-gray-500 mb-3">If one parent drove to every race in a season, at the federal rate of $0.725/mile</p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {seasonCostList.map(s => (
+                    <div key={s.season} className="bg-white rounded-lg p-3">
+                      <div className="text-xs text-gray-500">{s.season}</div>
+                      <div className="text-lg md:text-xl font-bold text-emerald-700">
+                        ${s.cost.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                      </div>
+                      <div className="text-xs text-gray-400">{s.miles.toLocaleString(undefined, { maximumFractionDigits: 0 })} mi · {s.races} races</div>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-3 pt-3 border-t border-emerald-200 flex items-baseline gap-2">
+                  <span className="text-sm text-gray-600">All-time total:</span>
+                  <span className="text-xl font-bold text-emerald-800">${totalTheoreticalCost.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                  <span className="text-xs text-gray-400">({totalTheoreticalMiles.toLocaleString(undefined, { maximumFractionDigits: 0 })} mi across {allDistances.length} races)</span>
+                </div>
+              </div>
+
+              {/* Race by Race Chart */}
+              <div className="bg-white rounded-lg shadow-lg p-4 md:p-6 mb-6">
+                <h2 className="text-lg md:text-xl font-bold text-gray-800 mb-4">Distance to Each Race</h2>
+                <div className="space-y-3">
+                  {allDistances.map((race, index) => (
+                    <div key={race.date} className="border-b border-gray-100 pb-3">
+                      <div className="flex flex-col md:flex-row md:justify-between md:items-start mb-2 gap-1">
+                        <div>
+                          <div className="font-semibold text-gray-800 text-sm md:text-base">
+                            {race.date} - {race.venue}
+                          </div>
+                          <div className="text-xs md:text-sm text-gray-500">{race.city}</div>
+                        </div>
+                        <div className="text-left md:text-right">
+                          {race.attended ? (
+                            <span className="text-green-600 font-semibold text-xs md:text-sm">
+                              ✓ Attended ({race.riders} entries)
+                            </span>
+                          ) : isFutureRace(race.date) ? (
+                            <span className="text-orange-500 font-semibold text-xs md:text-sm">
+                              📅 Upcoming
+                            </span>
+                          ) : (
+                            <span className="text-gray-400 text-xs md:text-sm">Not attended</span>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <div>
+                          <div className="flex justify-between text-xs text-gray-600 mb-1">
+                            <span>Theoretical (1 vehicle)</span>
+                            <span>{race.roundTripMiles.toLocaleString(undefined, { maximumFractionDigits: 0 })} mi</span>
+                          </div>
+                          <div className="bg-gray-200 rounded-full h-4">
+                            <div 
+                              className="bg-blue-400 h-4 rounded-full"
+                              style={{ width: `${(race.roundTripMiles / venuesByDistance[0].distance) * 100}%` }}
+                            />
+                          </div>
+                        </div>
+                        
+                        {race.attended && (
+                          <div>
+                            <div className="flex justify-between text-xs text-gray-600 mb-1">
+                              <span className="truncate">Actual ({race.riders} entries, {Math.ceil(race.riders / ridersPerVehicle)} veh)</span>
+                              <span className="ml-2">{race.actualMiles.toLocaleString(undefined, { maximumFractionDigits: 0 })} mi</span>
+                            </div>
+                            <div className="bg-gray-200 rounded-full h-4">
+                              <div 
+                                className="bg-green-500 h-4 rounded-full"
+                                style={{ width: `${(race.actualMiles / (venuesByDistance[0].distance * 20)) * 100}%` }}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Venues Ranked by Distance */}
+              <div className="bg-white rounded-lg shadow-lg p-4 md:p-6 mb-6">
+                <h2 className="text-lg md:text-xl font-bold text-gray-800 mb-4">Venues Ranked by Distance</h2>
+                <div className="overflow-x-auto -mx-4 md:mx-0">
+                  <table className="w-full min-w-[500px]">
+                    <thead>
+                      <tr className="border-b-2 border-gray-200">
+                        <th className="text-left py-2 md:py-3 px-2 md:px-4 font-semibold text-gray-700 text-sm md:text-base">Rank</th>
+                        <th className="text-left py-2 md:py-3 px-2 md:px-4 font-semibold text-gray-700 text-sm md:text-base">Venue</th>
+                        <th className="text-right py-2 md:py-3 px-2 md:px-4 font-semibold text-gray-700 text-sm md:text-base">Miles</th>
+                        <th className="text-right py-2 md:py-3 px-2 md:px-4 font-semibold text-gray-700 text-sm md:text-base">Time</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {venuesByDistance.map((venue, index) => (
+                        <tr key={venue.key} className="border-b border-gray-100 hover:bg-gray-50">
+                          <td className="py-2 md:py-3 px-2 md:px-4 font-bold text-gray-600 text-sm md:text-base">{index + 1}</td>
+                          <td className="py-2 md:py-3 px-2 md:px-4">
+                            <div className="font-medium text-gray-800 text-sm md:text-base">{venue.venue}</div>
+                            <div className="text-xs md:text-sm text-gray-500">{venue.city}</div>
+                          </td>
+                          <td className="py-2 md:py-3 px-2 md:px-4 text-right font-semibold text-blue-600 text-sm md:text-base">
+                            {venue.distance.toLocaleString(undefined, { maximumFractionDigits: 1 })} mi
+                          </td>
+                          <td className="py-2 md:py-3 px-2 md:px-4 text-right text-gray-600 text-sm md:text-base">
+                            {formatTime(venue.time)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Team Heatmap */}
+              <div className="bg-white rounded-lg shadow-lg p-4 md:p-6">
+                <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-4">
+                  Travel Heatmap - {selectedTeam}
+                </h2>
+                <p className="text-sm text-gray-600 mb-4">
+                  All driving routes for this team. Red markers show race venues visited.
+                </p>
+                <div className="rounded-lg overflow-hidden border border-gray-200">
+                  <img 
+                    src={`heatmaps/heatmap_team_${selectedTeam.replace(/ /g, '_').replace(/,/g, '').toLowerCase()}.png`}
+                    alt={`Heatmap for ${selectedTeam}`}
+                    className="w-full h-auto"
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      e.target.nextSibling.style.display = 'block';
+                    }}
+                  />
+                  <div style={{ display: 'none' }} className="p-8 text-center text-gray-500">
+                    <p>Heatmap not available. Run the Python heatmap generator script to create visualizations.</p>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </>
+      );
+    }
+
+    // COST ANALYSIS VIEW
+    function CostAnalysisView({ data, seasons }) {
+      const [seasonFilter, setSeasonFilter] = useState(seasons.find(s => s !== 'all') || 'all');
+
+      // Get all event dates for the selected season
+      const seasonEventDates = Object.keys(data.event_locations).filter(date => {
+        if (seasonFilter === 'all') return true;
+        return getSeason(date) === seasonFilter;
+      });
+
+      const completedDates = new Set(data.travel_data.map(r => r.date));
+      const upcomingCount = seasonEventDates.filter(d => !completedDates.has(d)).length;
+      const completedCount = seasonEventDates.length - upcomingCount;
+
+      // Calculate per-family cost for each team (one vehicle round-trip to every race)
+      const teamCosts = Object.keys(data.team_locations).filter(t => t !== 'Independent').map(teamName => {
+        let totalMiles = 0;
+        let raceCount = 0;
+        const teamDists = data.distances[teamName] || {};
+
+        seasonEventDates.forEach(date => {
+          const dist = teamDists[date];
+          if (dist) {
+            totalMiles += dist.round_trip_miles;
+            raceCount++;
+          }
+        });
+
+        return {
+          team: teamName,
+          miles: totalMiles,
+          cost: totalMiles * COST_PER_MILE,
+          races: raceCount,
+          avgCostPerRace: raceCount > 0 ? (totalMiles * COST_PER_MILE) / raceCount : 0,
+          avgMilesPerRace: raceCount > 0 ? totalMiles / raceCount : 0,
+        };
+      }).sort((a, b) => b.cost - a.cost);
+
+      const avgLeagueCost = teamCosts.length > 0 ? teamCosts.reduce((s, t) => s + t.cost, 0) / teamCosts.length : 0;
+      const maxCost = teamCosts[0];
+      const minCost = teamCosts[teamCosts.length - 1];
+
+      return (
+        <>
+          {/* Season Filter */}
+          <div className="bg-white rounded-lg shadow-lg p-4 md:p-6 mb-6">
+            <div className="flex items-center gap-4 flex-wrap">
+              <div>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Season</label>
+                <select
+                  value={seasonFilter}
+                  onChange={(e) => setSeasonFilter(e.target.value)}
+                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm md:text-base bg-white"
+                >
+                  {seasons.map(s => (
+                    <option key={s} value={s}>
+                      {s === 'all' ? 'All Time (Since 2023)' : s}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="text-sm text-gray-500 self-end pb-2">
+                {seasonEventDates.length} race{seasonEventDates.length !== 1 ? 's' : ''}
+                {upcomingCount > 0 && <span className="text-orange-500 ml-1">({upcomingCount} upcoming)</span>}
+              </div>
+            </div>
+          </div>
+
+          {/* Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div className="bg-white rounded-lg shadow-lg p-4 md:p-6">
+              <div className="text-xs text-gray-500 mb-1">League Average</div>
+              <div className="text-2xl md:text-3xl font-bold text-emerald-600">${avgLeagueCost.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+              <div className="text-xs text-gray-500 mt-1">per family across {seasonEventDates.length} races</div>
+            </div>
+            {maxCost && (
+              <div className="bg-red-50 rounded-lg shadow-lg p-4 md:p-6 border border-red-100">
+                <div className="text-xs text-red-600 mb-1">Highest Cost</div>
+                <div className="text-2xl md:text-3xl font-bold text-red-700">${maxCost.cost.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                <div className="text-xs text-gray-600 mt-1">{maxCost.team}</div>
+              </div>
+            )}
+            {minCost && (
+              <div className="bg-green-50 rounded-lg shadow-lg p-4 md:p-6 border border-green-100">
+                <div className="text-xs text-green-600 mb-1">Lowest Cost</div>
+                <div className="text-2xl md:text-3xl font-bold text-green-700">${minCost.cost.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                <div className="text-xs text-gray-600 mt-1">{minCost.team}</div>
+              </div>
+            )}
+          </div>
+
+          {/* Cost Ranking Table */}
+          <div className="bg-white rounded-lg shadow-lg p-4 md:p-6">
+            <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-1">What It Costs a Family</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              Theoretical cost for one parent to drive to {seasonEventDates.length === 1 ? 'the race' : `every race`} in {seasonFilter === 'all' ? 'the league' : seasonFilter}, at the federal rate of $0.725/mile.
+              {upcomingCount > 0 && <span className="text-orange-500"> Includes {upcomingCount} upcoming race{upcomingCount !== 1 ? 's' : ''}.</span>}
+            </p>
+            <div className="overflow-x-auto -mx-4 md:mx-0">
+              <table className="w-full min-w-[600px]">
+                <thead>
+                  <tr className="border-b-2 border-gray-200">
+                    <th className="text-left py-2 md:py-3 px-2 md:px-4 font-semibold text-gray-700 text-sm">Rank</th>
+                    <th className="text-left py-2 md:py-3 px-2 md:px-4 font-semibold text-gray-700 text-sm">Team</th>
+                    <th className="text-right py-2 md:py-3 px-2 md:px-4 font-semibold text-gray-700 text-sm">Total Miles</th>
+                    <th className="text-right py-2 md:py-3 px-2 md:px-4 font-semibold text-gray-700 text-sm">Total Cost</th>
+                    <th className="text-right py-2 md:py-3 px-2 md:px-4 font-semibold text-gray-700 text-sm">Avg/Race</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {teamCosts.map((team, i) => {
+                    const isAboveAvg = team.cost > avgLeagueCost;
+                    return (
+                      <tr key={team.team} className={`border-b border-gray-100 ${isAboveAvg ? 'bg-red-50/30' : ''}`}>
+                        <td className="py-2 md:py-3 px-2 md:px-4 text-sm font-medium text-gray-600">{i + 1}</td>
+                        <td className="py-2 md:py-3 px-2 md:px-4 text-sm font-medium text-gray-800">{team.team}</td>
+                        <td className="py-2 md:py-3 px-2 md:px-4 text-right text-sm text-gray-600" style={{fontVariantNumeric: 'tabular-nums'}}>
+                          {team.miles.toLocaleString(undefined, { maximumFractionDigits: 0 })} mi
+                        </td>
+                        <td className="py-2 md:py-3 px-2 md:px-4 text-right text-sm font-semibold" style={{fontVariantNumeric: 'tabular-nums'}}>
+                          <span className={isAboveAvg ? 'text-red-600' : 'text-green-600'}>
+                            ${team.cost.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                          </span>
+                        </td>
+                        <td className="py-2 md:py-3 px-2 md:px-4 text-right text-sm text-gray-500" style={{fontVariantNumeric: 'tabular-nums'}}>
+                          ${team.avgCostPerRace.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <div className="mt-3 pt-3 border-t text-xs text-gray-400">
+              Based on the IRS standard mileage rate of $0.725/mile. Red = above league average.
+              {upcomingCount > 0 && ' Includes projected costs for upcoming races at scheduled venues.'}
+            </div>
+          </div>
+        </>
+      );
+    }
+
+    // AWARDS VIEW
+    function AwardsView({ data, seasons, onTeamClick }) {
+      const [seasonFilter, setSeasonFilter] = useState(seasons.find(s => s !== 'all') || 'all');
+
+      const filteredData = data.travel_data.filter(record => {
+        if (seasonFilter === 'all') return true;
+        return record.season === seasonFilter;
+      });
+
+      // Group by race date
+      const racesByDate = {};
+      filteredData.forEach(record => {
+        if (record.team === 'Independent') return;
+        if (!racesByDate[record.date]) {
+          racesByDate[record.date] = {
+            date: record.date,
+            venue: record.venue,
+            city: record.city,
+            teams: []
+          };
+        }
+        racesByDate[record.date].teams.push(record);
+      });
+
+      // Sort races reverse chronologically
+      const races = Object.values(racesByDate).sort((a, b) => b.date.localeCompare(a.date));
+
+      // Per-race awards
+      const raceAwards = races.map(race => {
+        const sorted = [...race.teams].sort((a, b) => b.one_way_miles - a.one_way_miles);
+        const longHaul = sorted[0];
+        const homeTurf = sorted[sorted.length - 1];
+        return {
+          ...race,
+          longHaul,
+          homeTurf,
+        };
+      });
+
+      // Season-long: Odyssey Award (most cumulative vehicle-miles)
+      const teamTotals = {};
+      filteredData.forEach(record => {
+        if (record.team === 'Independent') return;
+        if (!teamTotals[record.team]) {
+          teamTotals[record.team] = { team: record.team, totalVehicleMiles: 0, races: 0 };
+        }
+        teamTotals[record.team].totalVehicleMiles += record.total_miles_traveled;
+        teamTotals[record.team].races += 1;
+      });
+      const odysseyWinner = Object.values(teamTotals).sort((a, b) => b.totalVehicleMiles - a.totalVehicleMiles)[0];
+
+      // Season-long: Trailblazer Award (biggest single-race commitment)
+      const trailblazerRecord = filteredData
+        .filter(r => r.team !== 'Independent')
+        .sort((a, b) => b.total_miles_traveled - a.total_miles_traveled)[0];
+
+      return (
+        <>
+          {/* Season Filter */}
+          <div className="bg-white rounded-lg shadow-lg p-4 md:p-6 mb-6">
+            <div className="flex items-center gap-4 flex-wrap">
+              <div>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Season</label>
+                <select
+                  value={seasonFilter}
+                  onChange={(e) => setSeasonFilter(e.target.value)}
+                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm md:text-base bg-white"
+                >
+                  {seasons.map(s => (
+                    <option key={s} value={s}>
+                      {s === 'all' ? 'All Time (Since 2023)' : s}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="text-sm text-gray-500 self-end pb-2">
+                {races.length} race{races.length !== 1 ? 's' : ''} &middot; {Object.keys(teamTotals).length} teams
+              </div>
+            </div>
+          </div>
+
+          {/* Season Awards */}
+          {odysseyWinner && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              {/* Odyssey Award */}
+              <div className="bg-gradient-to-br from-amber-50 to-yellow-50 rounded-lg shadow-lg p-6 border border-amber-200">
+                <div className="flex items-start gap-3">
+                  <div className="text-4xl">🏆</div>
+                  <div className="flex-1">
+                    <div className="text-sm font-semibold text-amber-700 uppercase tracking-wide">Odyssey Award</div>
+                    <div className="text-xs text-amber-600 mb-2">Most cumulative vehicle-miles this {seasonFilter === 'all' ? 'period' : 'season'}</div>
+                    <div className="text-xl md:text-2xl font-bold text-gray-800 cursor-pointer hover:text-blue-600 transition-colors" onClick={() => onTeamClick(odysseyWinner.team)}>{odysseyWinner.team}</div>
+                    <div className="text-lg font-semibold text-amber-700">
+                      {odysseyWinner.totalVehicleMiles.toLocaleString(undefined, { maximumFractionDigits: 0 })} miles
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">across {odysseyWinner.races} race{odysseyWinner.races !== 1 ? 's' : ''}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Trailblazer Award */}
+              {trailblazerRecord && (
+                <div className="bg-gradient-to-br from-orange-50 to-red-50 rounded-lg shadow-lg p-6 border border-orange-200">
+                  <div className="flex items-start gap-3">
+                    <div className="text-4xl">⚡</div>
+                    <div className="flex-1">
+                      <div className="text-sm font-semibold text-orange-700 uppercase tracking-wide">Trailblazer Award</div>
+                      <div className="text-xs text-orange-600 mb-2">Biggest single-race travel commitment</div>
+                      <div className="text-xl md:text-2xl font-bold text-gray-800 cursor-pointer hover:text-blue-600 transition-colors" onClick={() => onTeamClick(trailblazerRecord.team)}>{trailblazerRecord.team}</div>
+                      <div className="text-lg font-semibold text-orange-700">
+                        {trailblazerRecord.total_miles_traveled.toLocaleString(undefined, { maximumFractionDigits: 0 })} vehicle-miles
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        {trailblazerRecord.riders} riders &middot; {trailblazerRecord.round_trip_miles.toLocaleString(undefined, { maximumFractionDigits: 0 })} mi round-trip &middot; {trailblazerRecord.venue} ({trailblazerRecord.date})
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Per-Race Awards */}
+          <div className="space-y-4">
+            {raceAwards.map(race => (
+              <div key={race.date} className="bg-white rounded-lg shadow-lg p-4 md:p-6">
+                <div className="mb-4">
+                  <h3 className="text-lg font-bold text-gray-800">{race.venue}</h3>
+                  <p className="text-sm text-gray-500">{race.city} &middot; {new Date(race.date + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })} &middot; {race.teams.length} teams</p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {/* Long Haul */}
+                  {race.longHaul && (
+                    <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xl">🏔️</span>
+                        <span className="text-sm font-semibold text-blue-700 uppercase tracking-wide">Long Haul Award</span>
+                      </div>
+                      <div className="text-lg font-bold text-gray-800 cursor-pointer hover:text-blue-600 transition-colors" onClick={() => onTeamClick(race.longHaul.team)}>{race.longHaul.team}</div>
+                      <div className="text-sm text-blue-600 font-semibold">
+                        {race.longHaul.one_way_miles.toLocaleString(undefined, { maximumFractionDigits: 1 })} miles one-way
+                      </div>
+                      <div className="text-xs text-gray-500">{race.longHaul.riders} riders</div>
+                    </div>
+                  )}
+                  {/* Home Turf */}
+                  {race.homeTurf && (
+                    <div className="bg-green-50 rounded-lg p-4 border border-green-100">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xl">🏠</span>
+                        <span className="text-sm font-semibold text-green-700 uppercase tracking-wide">Home Turf Award</span>
+                      </div>
+                      <div className="text-lg font-bold text-gray-800 cursor-pointer hover:text-blue-600 transition-colors" onClick={() => onTeamClick(race.homeTurf.team)}>{race.homeTurf.team}</div>
+                      <div className="text-sm text-green-600 font-semibold">
+                        {race.homeTurf.one_way_miles.toLocaleString(undefined, { maximumFractionDigits: 1 })} miles one-way
+                      </div>
+                      <div className="text-xs text-gray-500">{race.homeTurf.riders} riders</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      );
+    }
+
+    // METHODOLOGY VIEW
+    function MethodologyView() {
+      return (
+        <div className="bg-white rounded-lg shadow-lg p-4 md:p-8">
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-4 md:mb-6">How This Works</h2>
+
+          <div className="prose max-w-none space-y-4 md:space-y-6 text-sm md:text-base">
+            <section>
+              <h3 className="text-xl md:text-2xl font-bold text-gray-800 mb-2 md:mb-3">What This Dashboard Does</h3>
+              <p className="text-gray-700">
+                Every WSCL race weekend, families load up the car and drive — sometimes 20 minutes, sometimes 6 hours.
+                This dashboard measures all of that travel across every team and every race since 2023, using Google Maps
+                driving distances and actual race attendance data from the league.
+              </p>
+            </section>
+
+            <section>
+              <h3 className="text-xl font-bold text-gray-800 mb-3">Where the Data Comes From</h3>
+              <ul className="list-disc pl-6 text-gray-700 space-y-2">
+                <li><strong>Race results</strong> are pulled from the WSCL website (washingtonleague.org). Each rider's team affiliation determines the attendance count per team per race.</li>
+                <li><strong>Team home bases</strong> are the city and ZIP code associated with each team (e.g., Palouse Composite = Moscow, ID 83843).</li>
+                <li><strong>Driving distances</strong> are calculated via the Google Maps Distance Matrix API — actual road routes, not straight lines.</li>
+                <li><strong>Upcoming races</strong> use the published WSCL schedule. Distances are known (same venues as prior years), but attendance isn't recorded until the race happens.</li>
+              </ul>
+            </section>
+
+            <section>
+              <h3 className="text-xl font-bold text-gray-800 mb-3">How Miles Are Calculated</h3>
+
+              <div className="space-y-4">
+                <div className="border-l-4 border-blue-500 pl-4">
+                  <h4 className="font-bold text-gray-800 mb-1">Leaderboard (Total Vehicle-Miles)</h4>
+                  <p className="text-gray-700">
+                    For each race a team attended: round-trip distance x number of vehicles needed (riders ÷ riders-per-vehicle setting).
+                    This is the total driving impact — how many car-trips worth of miles a team generates.
+                  </p>
+                </div>
+
+                <div className="border-l-4 border-emerald-500 pl-4">
+                  <h4 className="font-bold text-gray-800 mb-1">Cost Analysis (Per-Family Cost)</h4>
+                  <p className="text-gray-700">
+                    Round-trip distance to each race venue, multiplied by the IRS standard mileage rate ($0.725/mile).
+                    This is what it costs one family to drive to every race in a season — the same number regardless of team size.
+                  </p>
+                </div>
+
+                <div className="border-l-4 border-purple-500 pl-4">
+                  <h4 className="font-bold text-gray-800 mb-1">Venue Analysis — Theoretical vs. Actual</h4>
+                  <p className="text-gray-700">
+                    <strong>Theoretical:</strong> Average round-trip distance if every team sent one car. Shows which venues are
+                    most geographically central. <strong>Actual:</strong> Total vehicle-miles actually driven to each venue across
+                    all races held there, averaged per race. Shows real-world impact including team sizes and attendance patterns.
+                  </p>
+                </div>
+              </div>
+            </section>
+
+            <section>
+              <h3 className="text-xl font-bold text-gray-800 mb-3">Dashboard Tabs</h3>
+              <div className="space-y-3">
+                <div className="flex gap-3 items-start">
+                  <span className="text-lg shrink-0">📊</span>
+                  <div><strong>Team Leaderboard</strong> — All teams ranked by total vehicle-miles. Filter by season, switch between actual attendance and theoretical (every team at every race).</div>
+                </div>
+                <div className="flex gap-3 items-start">
+                  <span className="text-lg shrink-0">📍</span>
+                  <div><strong>Venue Analysis</strong> — Compare venues by centrality (theoretical) or real-world driving impact (actual). Drill into individual venues to see team-by-team distances.</div>
+                </div>
+                <div className="flex gap-3 items-start">
+                  <span className="text-lg shrink-0">👥</span>
+                  <div><strong>Team Deep Dive</strong> — Select a team to see their race-by-race travel, per-family cost breakdown by season, and venue distance rankings.</div>
+                </div>
+                <div className="flex gap-3 items-start">
+                  <span className="text-lg shrink-0">🏆</span>
+                  <div><strong>Awards</strong> — Fun per-race and season-long awards. Long Haul (farthest drive), Home Turf (shortest), Odyssey (most cumulative miles), and Trailblazer (biggest single-race commitment).</div>
+                </div>
+                <div className="flex gap-3 items-start">
+                  <span className="text-lg shrink-0">💰</span>
+                  <div><strong>Cost Analysis</strong> — What it costs one family to attend every race in a season, ranked by team. Based on the federal mileage rate of $0.725/mile. Includes upcoming scheduled races.</div>
+                </div>
+              </div>
+            </section>
+
+            <section>
+              <h3 className="text-xl font-bold text-gray-800 mb-3">Key Terms</h3>
+              <dl className="space-y-3">
+                <div>
+                  <dt className="font-bold text-gray-800">Rider-Races</dt>
+                  <dd className="text-gray-700 pl-4">Total rider appearances across all races. One rider attending 6 races = 6 rider-races.</dd>
+                </div>
+                <div>
+                  <dt className="font-bold text-gray-800">Riders per Vehicle</dt>
+                  <dd className="text-gray-700 pl-4">Adjustable setting (default: 2) for estimating how many cars a team needs. Affects total vehicle-miles on the leaderboard.</dd>
+                </div>
+                <div>
+                  <dt className="font-bold text-gray-800">Independent Riders</dt>
+                  <dd className="text-gray-700 pl-4">Riders not on a team. Counted in attendance totals but not in travel calculations (no home base to measure from).</dd>
+                </div>
+                <div>
+                  <dt className="font-bold text-gray-800">Spring / Fall Season</dt>
+                  <dd className="text-gray-700 pl-4">Spring = March–June, Fall = September–October. Matches the WSCL racing calendar.</dd>
+                </div>
+              </dl>
+            </section>
+
+            <section>
+              <h3 className="text-xl font-bold text-gray-800 mb-3">Assumptions & Limitations</h3>
+              <ul className="list-disc pl-6 text-gray-700 space-y-2">
+                <li>All riders on a team are assumed to travel from the team's home city. In reality, families may live spread across a region.</li>
+                <li>Distances are Google Maps driving routes — actual routes driven may differ.</li>
+                <li>Travel times are estimates without real-time traffic.</li>
+                <li>The $0.725/mile rate is the 2025 IRS standard mileage rate. Actual costs vary by vehicle.</li>
+                <li>Upcoming races show projected distances based on the scheduled venue. Attendance is unknown until race day.</li>
+              </ul>
+            </section>
+
+            <section className="border-t-2 border-gray-200 pt-6">
+              <h3 className="text-xl font-bold text-gray-800 mb-3">About This Project</h3>
+              <p className="text-gray-700 mb-2">
+                Built by a WSCL parent who wanted to understand what families across the league are actually spending
+                on travel. Race results are scraped from the WSCL website, distances are calculated via Google Maps,
+                and everything flows into this single-page dashboard.
+              </p>
+              <p className="text-gray-700">
+                Source code and data are available on{' '}
+                <a href="https://github.com/AndrewHoehn/WSCL_Distance_Tracker_By_Participation"
+                   className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">
+                  GitHub
+                </a>.
+                Have questions or want to contribute? Open an issue there.
+              </p>
+            </section>
+          </div>
+        </div>
+      );
+    }
+
+    // UTILITY FUNCTIONS
+    function calculateLeaderboard(filteredData, fullData, viewMode, metricMode, ridersPerVehicle) {
+      const teamStats = {};
+
+      if (viewMode === 'actual') {
+        filteredData.forEach(record => {
+          if (!teamStats[record.team]) {
+            teamStats[record.team] = {
+              name: record.team,
+              miles: 0,
+              minutes: 0,
+              races: 0,
+              riders: 0
+            };
+          }
+
+          if (metricMode === 'per_rider') {
+            // For averages: each rider travels the round-trip distance regardless of carpooling
+            teamStats[record.team].miles += record.round_trip_miles * record.riders;
+            teamStats[record.team].minutes += record.round_trip_minutes * record.riders;
+          } else {
+            // For totals: calculate based on vehicles needed
+            const vehicles = Math.ceil(record.riders / ridersPerVehicle);
+            teamStats[record.team].miles += record.round_trip_miles * vehicles;
+            teamStats[record.team].minutes += record.round_trip_minutes * vehicles;
+          }
+          
+          teamStats[record.team].races += 1;
+          teamStats[record.team].riders += record.riders;
+        });
+      } else {
+        const uniqueDates = [...new Set(filteredData.map(r => r.date))];
+        const allTeams = Object.keys(fullData.team_locations);
+
+        allTeams.forEach(teamName => {
+          teamStats[teamName] = {
+            name: teamName,
+            miles: 0,
+            minutes: 0,
+            races: 0,
+            riders: 0
+          };
+
+          uniqueDates.forEach(date => {
+            if (fullData.distances[teamName] && fullData.distances[teamName][date]) {
+              const dist = fullData.distances[teamName][date];
+              teamStats[teamName].miles += dist.round_trip_miles;
+              teamStats[teamName].minutes += dist.round_trip_minutes;
+              teamStats[teamName].races += 1;
+            }
+          });
+        });
+      }
+
+      let leaderboard = Object.values(teamStats);
+
+      // For per_rider mode, divide by total riders to get average
+      if (metricMode === 'per_rider' && viewMode === 'actual') {
+        leaderboard = leaderboard.map(team => ({
+          ...team,
+          miles: team.riders > 0 ? team.miles / team.riders : 0,
+          minutes: team.riders > 0 ? team.minutes / team.riders : 0
+        }));
+      }
+
+      leaderboard.sort((a, b) => b.miles - a.miles);
+
+      return leaderboard;
+    }
+
+    function isFutureRace(dateStr) {
+      return new Date(dateStr + 'T12:00:00') > new Date();
+    }
+
+    function getSeason(dateStr) {
+      const month = parseInt(dateStr.split('-')[1]);
+      const year = dateStr.split('-')[0];
+      if (month >= 3 && month <= 6) return `Spring ${year}`;
+      if (month >= 9 && month <= 10) return `Fall ${year}`;
+      return `Unknown ${year}`;
+    }
+
+    const COST_PER_MILE = 0.725;
+
+    function formatTime(minutes) {
+      const totalHours = Math.floor(minutes / 60);
+      const mins = Math.round(minutes % 60);
+      if (totalHours >= 48) {
+        const days = Math.floor(totalHours / 24);
+        const remainHours = totalHours % 24;
+        return `${days}d ${remainHours}h`;
+      }
+      return `${totalHours.toLocaleString()}h ${mins}m`;
+    }
+
+    ReactDOM.render(<WSCLDashboard />, document.getElementById('root'));
+  </script>
 </body>
 </html>
