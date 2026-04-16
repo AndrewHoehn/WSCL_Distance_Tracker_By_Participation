@@ -21,11 +21,16 @@
   <meta property="og:title" content="WSCL Travel Tracker">
   <meta property="og:description" content="Watch Washington Student Cycling League teams converge on every race venue in animated maps. Real drive-time animations, distance stats, and per-family cost breakdowns since 2023.">
   <meta property="og:site_name" content="WSCL Tracker">
+  <meta property="og:image" content="https://wscltracker.com/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="WSCL Travel Tracker — animated maps of teams converging on every race venue">
 
   <!-- Twitter Card -->
-  <meta name="twitter:card" content="summary">
+  <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="WSCL Travel Tracker">
   <meta name="twitter:description" content="Watch Washington Student Cycling League teams converge on every race venue in animated maps. Real drive-time animations, distance stats, and per-family cost breakdowns since 2023.">
+  <meta name="twitter:image" content="https://wscltracker.com/og-image.png">
 
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -411,7 +416,13 @@
             {activeTab === 'methodology' && <MethodologyView />}
 
             {/* Footer */}
-            <footer className="mt-8 pb-4 text-center text-xs text-gray-500">
+            <footer className="mt-8 pb-6 text-center text-xs text-gray-500 max-w-3xl mx-auto space-y-3">
+              <p className="text-gray-400 leading-relaxed">
+                <strong>Disclaimer:</strong> This is an independent hobby project. It is not
+                authorized, endorsed, or affiliated with the Washington Student Cycling League
+                or any of its member teams. All data is compiled from publicly available race
+                results; any errors are mine, not WSCL's.
+              </p>
               <p>
                 Built by <a href="https://github.com/AndrewHoehn" className="text-blue-600 hover:underline" target="_blank" rel="noopener">Andrew Hoehn</a>.
                 {' '}If you liked this, check out{' '}
