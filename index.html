@@ -188,7 +188,7 @@
                     {activeTab === 'teams' && '👥 Team Deep Dive'}
                     {activeTab === 'awards' && '🏆 Awards'}
                     {activeTab === 'costs' && '💰 Cost Analysis'}
-                    {activeTab === 'methodology' && '📖 Methodology'}
+                    {activeTab === 'methodology' && '📖 About'}
                   </span>
                   <span className="text-xl">{mobileMenuOpen ? '×' : '☰'}</span>
                 </button>
@@ -286,7 +286,7 @@
                         : 'text-gray-600 hover:bg-gray-50'
                     }`}
                   >
-                    📖 Methodology
+                    📖 About
                   </button>
                 </div>
               )}
@@ -361,7 +361,7 @@
                       : 'text-gray-600 hover:text-gray-800'
                   }`}
                 >
-                  📖 Methodology
+                  📖 About
                 </button>
               </div>
             </div>
@@ -1541,132 +1541,165 @@
     function MethodologyView() {
       return (
         <div className="bg-white rounded-lg shadow-lg p-4 md:p-8">
-          <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-4 md:mb-6">How This Works</h2>
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-4 md:mb-6">About this thing</h2>
 
-          <div className="prose max-w-none space-y-4 md:space-y-6 text-sm md:text-base">
+          <div className="prose max-w-none space-y-5 md:space-y-7 text-sm md:text-base">
             <section>
-              <h3 className="text-xl md:text-2xl font-bold text-gray-800 mb-2 md:mb-3">What This Dashboard Does</h3>
+              <h3 className="text-xl md:text-2xl font-bold text-gray-800 mb-2 md:mb-3">A campfire argument, basically</h3>
+              <p className="text-gray-700 mb-3">
+                A couple of us were sitting around a campfire at a race weekend, beers in hand, trying to settle
+                an argument: whose team drives the furthest? Everyone had a candidate. Everyone was sure they were
+                right. Nobody had any numbers.
+              </p>
+              <p className="text-gray-700 mb-3">
+                So I went home and built this, because apparently being a WSCL parent is not already enough of a
+                time sink. The campfire has long since burned out. The argument, uh, rages on — now with data.
+              </p>
               <p className="text-gray-700">
-                Every WSCL race weekend, families load up the car and drive — sometimes 20 minutes, sometimes 6 hours.
-                This dashboard measures all of that travel across every team and every race since 2023, using Google Maps
-                driving distances and actual race attendance data from the league.
+                We love WSCL. We love watching our kids ride bikes on real dirt, get braver, make friends, bonk, bonk
+                again, come home exhausted and happy. The coaches are volunteers and they're saints. The course crews
+                are volunteers and they're saints. The parent volunteers running registration at 6:45 AM in the rain
+                are saints. It is a genuinely great thing.
+              </p>
+              <p className="text-gray-700 mt-3">
+                It is also, and I say this with love, <em>a frankly absurd amount of driving</em>. Washington and
+                Idaho are big. The kids are worth it. The minivan is tired. This is a small monument to that.
               </p>
             </section>
 
             <section>
-              <h3 className="text-xl font-bold text-gray-800 mb-3">Where the Data Comes From</h3>
+              <h3 className="text-xl font-bold text-gray-800 mb-3">What you're looking at</h3>
+              <p className="text-gray-700 mb-3">
+                Every race, every team, every mile driven since the 2023 season — pieced together from public race
+                results and Google Maps. It's a leaderboard for the quiet, thankless, pre-dawn half of this sport:
+                the part where you're drinking gas station coffee in a loaded Subaru while your kid sleeps against
+                the window.
+              </p>
+              <p className="text-gray-700">
+                Most of the tabs are rankings. The map is the eye candy. The numbers on the Cost tab may ruin your
+                week — sorry in advance.
+              </p>
+            </section>
+
+            <section>
+              <h3 className="text-xl font-bold text-gray-800 mb-3">Where the data comes from</h3>
               <ul className="list-disc pl-6 text-gray-700 space-y-2">
-                <li><strong>Race results</strong> are pulled from the WSCL website (washingtonleague.org). Each rider's team affiliation determines the attendance count per team per race.</li>
-                <li><strong>Team home bases</strong> are the city and ZIP code associated with each team (e.g., Palouse Composite = Moscow, ID 83843).</li>
-                <li><strong>Driving distances</strong> are calculated via the Google Maps Distance Matrix API — actual road routes, not straight lines.</li>
-                <li><strong>Upcoming races</strong> use the published WSCL schedule. Distances are known (same venues as prior years), but attendance isn't recorded until the race happens.</li>
+                <li><strong>Attendance</strong> is scraped from WSCL's public race results — each rider's listed team gets credit for one rider-race on that date.</li>
+                <li><strong>Team home bases</strong> are the city & ZIP associated with each team (Palouse Composite lives in Moscow, ID; Yakima lives in Yakima; and so on).</li>
+                <li><strong>Driving distances and routes</strong> come from Google Maps. Actual roads, not crow-flies.</li>
+                <li><strong>Upcoming races</strong> get projected distances (same venue = same miles) but no attendance until they happen.</li>
               </ul>
             </section>
 
             <section>
-              <h3 className="text-xl font-bold text-gray-800 mb-3">How Miles Are Calculated</h3>
+              <h3 className="text-xl font-bold text-gray-800 mb-3">How the numbers get calculated</h3>
 
               <div className="space-y-4">
                 <div className="border-l-4 border-blue-500 pl-4">
-                  <h4 className="font-bold text-gray-800 mb-1">Leaderboard (Total Vehicle-Miles)</h4>
+                  <h4 className="font-bold text-gray-800 mb-1">Leaderboard (total vehicle-miles)</h4>
                   <p className="text-gray-700">
-                    For each race a team attended: round-trip distance x number of vehicles needed (riders ÷ riders-per-vehicle setting).
-                    This is the total driving impact — how many car-trips worth of miles a team generates.
+                    Round-trip distance × number of vehicles a team needed (riders ÷ the riders-per-vehicle slider).
+                    This is the whole team's driving footprint — how many car-trips-worth of highway a team sent.
                   </p>
                 </div>
 
                 <div className="border-l-4 border-emerald-500 pl-4">
-                  <h4 className="font-bold text-gray-800 mb-1">Cost Analysis (Per-Family Cost)</h4>
+                  <h4 className="font-bold text-gray-800 mb-1">Cost (per family)</h4>
                   <p className="text-gray-700">
-                    Round-trip distance to each race venue, multiplied by the IRS standard mileage rate ($0.725/mile).
-                    This is what it costs one family to drive to every race in a season — the same number regardless of team size.
+                    Round-trip distance × the IRS rate ($0.725/mile). What it would cost one family to drive to every
+                    race in the season, if they drove solo. Doesn't depend on team size — Inland NW's one family pays
+                    roughly the same as Cedarcrest MTB's one family; the difference is just how far their venues are.
                   </p>
                 </div>
 
                 <div className="border-l-4 border-purple-500 pl-4">
-                  <h4 className="font-bold text-gray-800 mb-1">Venue Analysis — Theoretical vs. Actual</h4>
+                  <h4 className="font-bold text-gray-800 mb-1">Venues — "theoretical" vs "actual"</h4>
                   <p className="text-gray-700">
-                    <strong>Theoretical:</strong> Average round-trip distance if every team sent one car. Shows which venues are
-                    most geographically central. <strong>Actual:</strong> Total vehicle-miles actually driven to each venue across
-                    all races held there, averaged per race. Shows real-world impact including team sizes and attendance patterns.
+                    <strong>Theoretical</strong> asks: if every WSCL team showed up, what's the average round-trip?
+                    Pure geography — the most central venue wins. <strong>Actual</strong> uses the teams that really
+                    showed up. Both answer legitimate versions of "where does the league drive the least."
                   </p>
                 </div>
               </div>
             </section>
 
             <section>
-              <h3 className="text-xl font-bold text-gray-800 mb-3">Dashboard Tabs</h3>
+              <h3 className="text-xl font-bold text-gray-800 mb-3">The tabs, briefly</h3>
               <div className="space-y-3">
                 <div className="flex gap-3 items-start">
                   <span className="text-lg shrink-0">📊</span>
-                  <div><strong>Team Leaderboard</strong> — All teams ranked by total vehicle-miles. Filter by season, switch between actual attendance and theoretical (every team at every race).</div>
+                  <div><strong>Team Leaderboard</strong> — who's logging the most miles, by season or all-time. Toggle actual vs theoretical (what if every team went to every race).</div>
+                </div>
+                <div className="flex gap-3 items-start">
+                  <span className="text-lg shrink-0">🏁</span>
+                  <div><strong>Race Day</strong> — pick a race, hit play, watch every team converge on the venue at compressed real-drive-time. The eye candy.</div>
                 </div>
                 <div className="flex gap-3 items-start">
                   <span className="text-lg shrink-0">📍</span>
-                  <div><strong>Venue Analysis</strong> — Compare venues by centrality (theoretical) or real-world driving impact (actual). Drill into individual venues to see team-by-team distances.</div>
+                  <div><strong>Venue Analysis</strong> — which venues keep everyone closest, with an animated map for each one.</div>
                 </div>
                 <div className="flex gap-3 items-start">
                   <span className="text-lg shrink-0">👥</span>
-                  <div><strong>Team Deep Dive</strong> — Select a team to see their race-by-race travel, per-family cost breakdown by season, and venue distance rankings.</div>
+                  <div><strong>Team Deep Dive</strong> — one team's whole story: what each race cost them, where they've driven, ranked by distance. Has the fan-out animation from their home to every venue.</div>
                 </div>
                 <div className="flex gap-3 items-start">
                   <span className="text-lg shrink-0">🏆</span>
-                  <div><strong>Awards</strong> — Fun per-race and season-long awards. Long Haul (farthest drive), Home Turf (shortest), Odyssey (most cumulative miles), and Trailblazer (biggest single-race commitment).</div>
+                  <div><strong>Awards</strong> — quick recognition. Long Haul, Home Turf, Odyssey, Trailblazer. Unofficial. No trophies, sorry.</div>
                 </div>
                 <div className="flex gap-3 items-start">
                   <span className="text-lg shrink-0">💰</span>
-                  <div><strong>Cost Analysis</strong> — What it costs one family to attend every race in a season, ranked by team. Based on the federal mileage rate of $0.725/mile. Includes upcoming scheduled races.</div>
+                  <div><strong>Cost Analysis</strong> — what the gas bill looks like if one parent drove to every race in a season. Don't look at this before payday.</div>
                 </div>
               </div>
             </section>
 
             <section>
-              <h3 className="text-xl font-bold text-gray-800 mb-3">Key Terms</h3>
+              <h3 className="text-xl font-bold text-gray-800 mb-3">Definitions you might want</h3>
               <dl className="space-y-3">
                 <div>
-                  <dt className="font-bold text-gray-800">Rider-Races</dt>
-                  <dd className="text-gray-700 pl-4">Total rider appearances across all races. One rider attending 6 races = 6 rider-races.</dd>
+                  <dt className="font-bold text-gray-800">Rider-race</dt>
+                  <dd className="text-gray-700 pl-4">One rider at one race. Six kids × four races = 24 rider-races. It's the unit of attendance.</dd>
                 </div>
                 <div>
-                  <dt className="font-bold text-gray-800">Riders per Vehicle</dt>
-                  <dd className="text-gray-700 pl-4">Adjustable setting (default: 2) for estimating how many cars a team needs. Affects total vehicle-miles on the leaderboard.</dd>
+                  <dt className="font-bold text-gray-800">Riders-per-vehicle</dt>
+                  <dd className="text-gray-700 pl-4">A guess at team carpooling. Default 2 (one parent, one kid). Move the slider if your team's more organized than that.</dd>
                 </div>
                 <div>
-                  <dt className="font-bold text-gray-800">Independent Riders</dt>
-                  <dd className="text-gray-700 pl-4">Riders not on a team. Counted in attendance totals but not in travel calculations (no home base to measure from).</dd>
+                  <dt className="font-bold text-gray-800">Independent riders</dt>
+                  <dd className="text-gray-700 pl-4">Riders not affiliated with a team. They're counted in race attendance totals but have no home base, so they're excluded from the driving math.</dd>
                 </div>
                 <div>
-                  <dt className="font-bold text-gray-800">Spring / Fall Season</dt>
-                  <dd className="text-gray-700 pl-4">Spring = March–June, Fall = September–October. Matches the WSCL racing calendar.</dd>
+                  <dt className="font-bold text-gray-800">Spring / Fall</dt>
+                  <dd className="text-gray-700 pl-4">WSCL's two seasons. Spring = March–June, Fall = September–October.</dd>
                 </div>
               </dl>
             </section>
 
             <section>
-              <h3 className="text-xl font-bold text-gray-800 mb-3">Assumptions & Limitations</h3>
+              <h3 className="text-xl font-bold text-gray-800 mb-3">Things this doesn't know</h3>
               <ul className="list-disc pl-6 text-gray-700 space-y-2">
-                <li>All riders on a team are assumed to travel from the team's home city. In reality, families may live spread across a region.</li>
-                <li>Distances are Google Maps driving routes — actual routes driven may differ.</li>
-                <li>Travel times are estimates without real-time traffic.</li>
-                <li>The $0.725/mile rate is the 2025 IRS standard mileage rate. Actual costs vary by vehicle.</li>
-                <li>Upcoming races show projected distances based on the scheduled venue. Attendance is unknown until race day.</li>
+                <li>Who's actually carpooling. Cedarcrest's eight cars might be three. We're averaging.</li>
+                <li>Where your family <em>actually</em> lives. If you're on Team Palouse but drive in from Pullman, the map thinks you're in Moscow, ID. Sorry.</li>
+                <li>Traffic. I-90 on race-weekend Saturday does not respect Google's "typical travel time."</li>
+                <li>Your particular vehicle's gas mileage. $0.725/mi is the IRS average; the person driving a '98 Suburban is paying more, and the EV owner is paying a lot less.</li>
+                <li>Future races. We project the drive but can't guess who'll show up.</li>
               </ul>
             </section>
 
             <section className="border-t-2 border-gray-200 pt-6">
-              <h3 className="text-xl font-bold text-gray-800 mb-3">About This Project</h3>
+              <h3 className="text-xl font-bold text-gray-800 mb-3">Who / why / where's the code</h3>
               <p className="text-gray-700 mb-2">
-                Built by a WSCL parent who wanted to understand what families across the league are actually spending
-                on travel. Race results are scraped from the WSCL website, distances are calculated via Google Maps,
-                and everything flows into this single-page dashboard.
+                Built by one WSCL parent over a few winter evenings when the driving was, mercifully, on pause.
+                Completely unofficial — the league had nothing to do with it and doesn't owe anyone any of this.
+                It's a love letter, a bar-argument-settler, and an ode to everyone who has ever eaten a gas station
+                breakfast burrito en route to a race course.
               </p>
               <p className="text-gray-700">
-                Source code and data are available on{' '}
+                Code and data are on{' '}
                 <a href="https://github.com/AndrewHoehn/WSCL_Distance_Tracker_By_Participation"
                    className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">
                   GitHub
-                </a>.
-                Have questions or want to contribute? Open an issue there.
+                </a>. Spot something wrong? Open an issue — I probably got your team's commute backwards.
               </p>
             </section>
           </div>
