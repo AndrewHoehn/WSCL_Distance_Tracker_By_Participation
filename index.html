@@ -8,18 +8,26 @@
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <style>
+    .leaflet-container { background: #0d1117 !important; }
+    .race-day-venue-icon { background: transparent; border: none; }
+  </style>
 </head>
 <body>
   <div id="root"></div>
 
-  <!-- Load data as JS variable (works with file:// URLs unlike fetch) -->
+  <!-- Load data as JS variables (works with file:// URLs unlike fetch) -->
   <script src="wscl_distance_data.js" onerror="console.log('No JS data file found, will try fetch')"></script>
+  <script src="race_routes.js" onerror="console.log('No JS routes file found, will try fetch')"></script>
 
   <script type="text/babel">
     const { useState, useEffect } = React;
 
     function WSCLDashboard() {
       const [data, setData] = useState(null);
+      const [routesData, setRoutesData] = useState(null);
       const [loading, setLoading] = useState(true);
       const [error, setError] = useState(null);
       const [activeTab, setActiveTab] = useState('leaderboard');
@@ -58,6 +66,24 @@
               setError('Data file not found. Make sure wscl_distance_data.json is in the same folder, or serve via a local web server.');
               setLoading(false);
             }
+          });
+
+        // Also fetch the route data used for animated maps. Works via HTTP (fetch)
+        // or file:// (fall back to window.__WSCL_ROUTES__ from race_routes.js).
+        const applyRoutes = rd => {
+          if (rd && rd.races) {
+            const sorted = [...rd.races].sort((a, b) => b.date.localeCompare(a.date));
+            setRoutesData({ races: sorted });
+          }
+        };
+        fetch('race_routes.json')
+          .then(r => r.ok ? r.json() : null)
+          .then(rd => {
+            if (rd) applyRoutes(rd);
+            else if (window.__WSCL_ROUTES__) applyRoutes(window.__WSCL_ROUTES__);
+          })
+          .catch(() => {
+            if (window.__WSCL_ROUTES__) applyRoutes(window.__WSCL_ROUTES__);
           });
       }, []);
 
@@ -129,6 +155,7 @@
                 >
                   <span className="flex items-center gap-2">
                     {activeTab === 'leaderboard' && '📊 Team Leaderboard'}
+                    {activeTab === 'raceday' && '🏁 Race Day'}
                     {activeTab === 'venues' && '📍 Venue Analysis'}
                     {activeTab === 'teams' && '👥 Team Deep Dive'}
                     {activeTab === 'awards' && '🏆 Awards'}
@@ -154,6 +181,19 @@
                     }`}
                   >
                     📊 Team Leaderboard
+                  </button>
+                  <button
+                    onClick={() => {
+                      setActiveTab('raceday');
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`w-full text-left px-6 py-4 font-semibold transition-colors ${
+                      activeTab === 'raceday'
+                        ? 'bg-blue-50 text-blue-600'
+                        : 'text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    🏁 Race Day
                   </button>
                   <button
                     onClick={() => {
@@ -236,6 +276,16 @@
                   📊 Team Leaderboard
                 </button>
                 <button
+                  onClick={() => setActiveTab('raceday')}
+                  className={`px-6 py-4 font-semibold transition-colors ${
+                    activeTab === 'raceday'
+                      ? 'text-blue-600 border-b-2 border-blue-600'
+                      : 'text-gray-600 hover:text-gray-800'
+                  }`}
+                >
+                  🏁 Race Day
+                </button>
+                <button
                   onClick={() => setActiveTab('venues')}
                   className={`px-6 py-4 font-semibold transition-colors ${
                     activeTab === 'venues'
@@ -304,9 +354,12 @@
               />
             )}
 
+            {activeTab === 'raceday' && <RaceDayView routesData={routesData} />}
+
             {activeTab === 'venues' && (
               <VenueView
                 data={data}
+                routesData={routesData}
                 selectedVenue={selectedVenue}
                 setSelectedVenue={setSelectedVenue}
                 selectedEventDate={selectedEventDate}
@@ -317,6 +370,7 @@
             {activeTab === 'teams' && (
               <TeamView
                 data={data}
+                routesData={routesData}
                 selectedTeam={selectedTeam}
                 setSelectedTeam={setSelectedTeam}
                 ridersPerVehicle={ridersPerVehicle}
@@ -555,33 +609,12 @@
             </div>
           </div>
 
-          {/* Heatmap */}
-          <div className="bg-white rounded-lg shadow-lg p-4 md:p-6">
-            <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-4">Travel Heatmap - All Races</h2>
-            <p className="text-sm text-gray-600 mb-4">
-              Visualization of all driving routes since 2023. Brighter colors indicate more frequent travel.
-            </p>
-            <div className="rounded-lg overflow-hidden border border-gray-200">
-              <img 
-                src="heatmaps/heatmap_overall.png" 
-                alt="Overall travel heatmap"
-                className="w-full h-auto"
-                onError={(e) => {
-                  e.target.style.display = 'none';
-                  e.target.nextSibling.style.display = 'block';
-                }}
-              />
-              <div style={{ display: 'none' }} className="p-8 text-center text-gray-500">
-                <p>Heatmap not available. Run the Python heatmap generator script to create visualizations.</p>
-              </div>
-            </div>
-          </div>
         </>
       );
     }
 
     // VENUE VIEW
-    function VenueView({ data, selectedVenue, setSelectedVenue, selectedEventDate, setSelectedEventDate }) {
+    function VenueView({ data, routesData, selectedVenue, setSelectedVenue, selectedEventDate, setSelectedEventDate }) {
       const [venueCompareMode, setVenueCompareMode] = useState('theoretical');
       // Get unique venues
       const venues = {};
@@ -759,6 +792,35 @@
                 </div>
               </div>
 
+              {/* Animated convergence map for this venue's races */}
+              {routesData && (() => {
+                const venueRaces = routesData.races.filter(r =>
+                  r.city === currentVenue.city && r.venue === currentVenue.venue
+                );
+                if (venueRaces.length === 0) {
+                  return (
+                    <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+                      <h2 className="text-xl font-bold text-gray-800 mb-1">🏁 Race Day at {currentVenue.venue}</h2>
+                      <p className="text-sm text-gray-500">No animated route data available yet for races at this venue.</p>
+                    </div>
+                  );
+                }
+                return (
+                  <div className="mb-6">
+                    <ConvergenceAnimation
+                      races={venueRaces}
+                      title={`🏁 Race Day at ${currentVenue.venue}`}
+                      description={venueRaces.length > 1
+                        ? `${venueRaces.length} races held here — pick a date to watch everyone converge.`
+                        : 'Watch every team converge on this venue at real-drive-time proportions.'}
+                      height="480px"
+                      compact={true}
+                      showSidebar={true}
+                    />
+                  </div>
+                );
+              })()}
+
               <div className="bg-white rounded-lg shadow-lg p-6">
                 <h2 className="text-xl font-bold text-gray-800 mb-4">
                   {selectedEventDate ? `Actual Travel - ${selectedEventDate}` : 'Theoretical Travel Distance by Team'}
@@ -831,7 +893,7 @@
     }
 
     // TEAM VIEW
-    function TeamView({ data, selectedTeam, setSelectedTeam, ridersPerVehicle }) {
+    function TeamView({ data, routesData, selectedTeam, setSelectedTeam, ridersPerVehicle }) {
       const teamList = Object.keys(data.team_locations).sort();
 
       useEffect(() => {
@@ -1009,6 +1071,15 @@
                 </div>
               </div>
 
+              {/* Team Journey Animation */}
+              <div className="mb-6">
+                <TeamJourneyMap
+                  teamName={selectedTeam}
+                  teamHome={teamLocation}
+                  routesData={routesData}
+                />
+              </div>
+
               {/* Race by Race Chart */}
               <div className="bg-white rounded-lg shadow-lg p-4 md:p-6 mb-6">
                 <h2 className="text-lg md:text-xl font-bold text-gray-800 mb-4">Distance to Each Race</h2>
@@ -1105,29 +1176,6 @@
                 </div>
               </div>
 
-              {/* Team Heatmap */}
-              <div className="bg-white rounded-lg shadow-lg p-4 md:p-6">
-                <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-4">
-                  Travel Heatmap - {selectedTeam}
-                </h2>
-                <p className="text-sm text-gray-600 mb-4">
-                  All driving routes for this team. Red markers show race venues visited.
-                </p>
-                <div className="rounded-lg overflow-hidden border border-gray-200">
-                  <img 
-                    src={`heatmaps/heatmap_team_${selectedTeam.replace(/ /g, '_').replace(/,/g, '').toLowerCase()}.png`}
-                    alt={`Heatmap for ${selectedTeam}`}
-                    className="w-full h-auto"
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                      e.target.nextSibling.style.display = 'block';
-                    }}
-                  />
-                  <div style={{ display: 'none' }} className="p-8 text-center text-gray-500">
-                    <p>Heatmap not available. Run the Python heatmap generator script to create visualizations.</p>
-                  </div>
-                </div>
-              </div>
             </>
           )}
         </>
@@ -1673,6 +1721,779 @@
         return `${days}d ${remainHours}h`;
       }
       return `${totalHours.toLocaleString()}h ${mins}m`;
+    }
+
+    // ============================================================
+    // Race Day animated convergence view
+    // ============================================================
+
+    const RACE_DAY_PALETTE = [
+      '#ff6b6b', '#4ecdc4', '#ffe66d', '#a8e6cf', '#ff8b94',
+      '#95e1d3', '#fce38a', '#ff9aa2', '#c7ceea', '#b5ead7',
+      '#ffdac1', '#e2f0cb', '#f1c0e8', '#cfbaf0', '#a3c4f3',
+      '#90dbf4', '#8eecf5', '#98f5e1', '#b9fbc0', '#fbf8cc',
+      '#ffcfd2', '#f1c0e8', '#cfbaf0', '#a3c4f3', '#bbfa89',
+      '#f9e784', '#fcb392', '#f47b7b', '#5eead4', '#93c5fd',
+      '#fda4af', '#fdba74', '#fde047', '#bef264', '#86efac',
+      '#67e8f9', '#a5b4fc', '#c4b5fd', '#f0abfc', '#fb7185',
+    ];
+
+    function precomputeRoute(points) {
+      const cum = [0];
+      let total = 0;
+      for (let i = 1; i < points.length; i++) {
+        const [lat1, lng1] = points[i-1];
+        const [lat2, lng2] = points[i];
+        const dlat = lat2 - lat1;
+        const dlng = (lng2 - lng1) * Math.cos(lat1 * Math.PI / 180);
+        const seg = Math.sqrt(dlat * dlat + dlng * dlng);
+        total += seg;
+        cum.push(total);
+      }
+      return { points, cum, total };
+    }
+
+    function pointAt(route, frac) {
+      const { points, cum, total } = route;
+      if (frac <= 0) return points[0];
+      if (frac >= 1) return points[points.length - 1];
+      const target = frac * total;
+      let lo = 0, hi = cum.length - 1;
+      while (lo < hi) {
+        const mid = (lo + hi) >> 1;
+        if (cum[mid] < target) lo = mid + 1; else hi = mid;
+      }
+      const i = Math.max(1, lo);
+      const segFrac = (target - cum[i-1]) / (cum[i] - cum[i-1] || 1);
+      const [lat1, lng1] = points[i-1];
+      const [lat2, lng2] = points[i];
+      return [lat1 + (lat2 - lat1) * segFrac, lng1 + (lng2 - lng1) * segFrac];
+    }
+
+    // ConvergenceAnimation: core reusable animated convergence map.
+    // Accepts a list of races and a default date; handles map rendering,
+    // animation, controls, and sidebar. Used by both RaceDayView and VenueView.
+    function ConvergenceAnimation({ races, title, description, height = '600px', compact = false, showSidebar = true }) {
+      const [selectedDate, setSelectedDate] = useState(() => races && races.length > 0 ? races[0].date : null);
+      const [speed, setSpeed] = useState(1);
+      const [clock, setClock] = useState('0:00');
+      const [playing, setPlaying] = useState(false);
+      const [finished, setFinished] = useState(false);
+      const [stats, setStats] = useState(null);
+      const [arrivedTeams, setArrivedTeams] = useState(() => new Set());
+
+      const mapContainerRef = React.useRef(null);
+      const mapRef = React.useRef(null);
+      const animRef = React.useRef({ trips: [], venueMarker: null, homeMarkers: [], startTs: null, pausedElapsed: 0, raf: null, longestMin: 0 });
+      const speedRef = React.useRef(speed);
+      const autoPlayPendingRef = React.useRef(false);
+      const playingRef = React.useRef(false);
+      const finishedRef = React.useRef(false);
+
+      React.useEffect(() => { speedRef.current = speed; }, [speed]);
+      React.useEffect(() => { playingRef.current = playing; }, [playing]);
+      React.useEffect(() => { finishedRef.current = finished; }, [finished]);
+
+      const ANIM_BASE_SECONDS = 8;
+      const animDurationMs = () => (ANIM_BASE_SECONDS / speedRef.current) * 1000;
+
+      // If the race list changes (e.g. different venue selected), reset selection
+      React.useEffect(() => {
+        if (races && races.length > 0) {
+          const stillValid = races.some(r => r.date === selectedDate);
+          if (!stillValid) setSelectedDate(races[0].date);
+        } else {
+          setSelectedDate(null);
+        }
+      }, [races]);
+
+      // Init map when container is ready
+      React.useEffect(() => {
+        if (!mapContainerRef.current || mapRef.current) return;
+        const m = L.map(mapContainerRef.current, { preferCanvas: true, zoomControl: true }).setView([47.5, -120.5], 7);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
+          attribution: '© OpenStreetMap © CARTO',
+          subdomains: 'abcd',
+          maxZoom: 19,
+        }).addTo(m);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', {
+          subdomains: 'abcd', maxZoom: 19, pane: 'shadowPane',
+        }).addTo(m);
+        mapRef.current = m;
+        // Fix sizing after mount (Leaflet needs an invalidateSize when container was hidden)
+        setTimeout(() => { if (mapRef.current) mapRef.current.invalidateSize(); }, 100);
+        return () => {
+          if (animRef.current.raf) cancelAnimationFrame(animRef.current.raf);
+          if (mapRef.current) { mapRef.current.remove(); mapRef.current = null; }
+        };
+      }, []);
+
+      // Load a race
+      const loadRace = React.useCallback((date) => {
+        if (!races || !mapRef.current || !date) return;
+        const race = races.find(r => r.date === date);
+        if (!race) return;
+        const map = mapRef.current;
+
+        // Stop any running animation
+        if (animRef.current.raf) cancelAnimationFrame(animRef.current.raf);
+        animRef.current.raf = null;
+        animRef.current.startTs = null;
+        animRef.current.pausedElapsed = 0;
+
+        // Remove previous layers
+        for (const t of animRef.current.trips) {
+          if (t.trailLayer) map.removeLayer(t.trailLayer);
+          if (t.dotLayer) map.removeLayer(t.dotLayer);
+        }
+        for (const h of animRef.current.homeMarkers) map.removeLayer(h);
+        if (animRef.current.venueMarker) map.removeLayer(animRef.current.venueMarker);
+
+        const longestMin = Math.max(...race.trips.map(t => t.m));
+        const shortestMin = Math.min(...race.trips.map(t => t.m));
+        const fleetMinutes = race.trips.reduce((s, t) => s + t.m * t.r, 0);
+
+        const trips = race.trips.map((trip, i) => {
+          const route = precomputeRoute(trip.p);
+          const color = RACE_DAY_PALETTE[i % RACE_DAY_PALETTE.length];
+          const trailLayer = L.polyline([], { color, weight: 3, opacity: 0.85, lineCap: 'round', lineJoin: 'round' }).addTo(map);
+          const dotLayer = L.circleMarker(trip.h, { radius: 5, color: '#fff', weight: 2, fillColor: color, fillOpacity: 1 }).addTo(map);
+          dotLayer.bindTooltip(trip.t, { permanent: false, direction: 'top', offset: [0, -8] });
+          return { trip, route, color, trailLayer, dotLayer, arrived: false };
+        });
+
+        const homeMarkers = race.trips.map(trip =>
+          L.circleMarker(trip.h, { radius: 3, color: '#30363d', weight: 1, fillColor: '#6e7681', fillOpacity: 0.9, interactive: false }).addTo(map)
+        );
+
+        const venueMarker = L.marker(race.vl, {
+          icon: L.divIcon({
+            className: 'race-day-venue-icon',
+            html: `<div style="background:#f85149;color:white;padding:4px 8px;border-radius:4px;font-size:11px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,0.5);white-space:nowrap;">🏁 ${race.venue}</div>`,
+            iconAnchor: [40, 12],
+          })
+        }).addTo(map);
+
+        const allPoints = race.trips.flatMap(t => t.p).concat([race.vl]).concat(race.trips.map(t => t.h));
+        map.fitBounds(L.latLngBounds(allPoints), { padding: [40, 40] });
+
+        animRef.current = { ...animRef.current, trips, venueMarker, homeMarkers, longestMin, startTs: null, pausedElapsed: 0, raf: null };
+
+        // Sort trips for arrival list
+        const sortedTrips = [...trips].sort((a, b) => a.trip.m - b.trip.m);
+        setStats({
+          race,
+          longestMin,
+          shortestMin,
+          fleetMinutes,
+          teamCount: race.trips.length,
+          sortedTrips,
+        });
+        setClock('0:00');
+        setPlaying(false);
+        setFinished(false);
+        setArrivedTeams(new Set());
+        // Queue up autoplay: fire when the map scrolls into view (or immediately if it's already in view).
+        autoPlayPendingRef.current = true;
+      }, [races]);
+
+      // React to date change
+      React.useEffect(() => {
+        if (selectedDate) loadRace(selectedDate);
+      }, [selectedDate, loadRace]);
+
+      // Animation step
+      const step = React.useCallback((timestamp) => {
+        const state = animRef.current;
+        if (state.startTs === null) state.startTs = timestamp - state.pausedElapsed;
+        const elapsed = timestamp - state.startTs;
+        const dur = animDurationMs();
+        const progress = Math.min(1, elapsed / dur);
+
+        const newlyArrived = new Set();
+        for (const t of state.trips) {
+          const frac = Math.min(1, progress * (state.longestMin / t.trip.m));
+          const pt = pointAt(t.route, frac);
+          const target = frac * t.route.total;
+          const trail = [];
+          for (let i = 0; i < t.route.points.length; i++) {
+            if (t.route.cum[i] <= target) trail.push(t.route.points[i]);
+            else break;
+          }
+          trail.push(pt);
+          t.trailLayer.setLatLngs(trail);
+          t.dotLayer.setLatLng(pt);
+          if (frac >= 1 && !t.arrived) {
+            t.arrived = true;
+            newlyArrived.add(t.trip.t);
+          }
+        }
+
+        if (newlyArrived.size > 0) {
+          setArrivedTeams(prev => {
+            const next = new Set(prev);
+            newlyArrived.forEach(n => next.add(n));
+            return next;
+          });
+        }
+
+        const simMinutes = Math.min(state.longestMin, (elapsed / dur) * state.longestMin);
+        const h = Math.floor(simMinutes / 60);
+        const m = Math.floor(simMinutes % 60);
+        setClock(`${h}:${String(m).padStart(2, '0')}`);
+
+        if (progress >= 1) {
+          state.raf = null;
+          state.startTs = null;
+          state.pausedElapsed = 0;
+          setPlaying(false);
+          setFinished(true);
+          return;
+        }
+        state.raf = requestAnimationFrame(step);
+      }, []);
+
+      const handlePlay = () => {
+        if (!stats) return;
+        if (playing) {
+          // Pause
+          const state = animRef.current;
+          if (state.raf) cancelAnimationFrame(state.raf);
+          state.raf = null;
+          const now = performance.now();
+          if (state.startTs !== null) state.pausedElapsed = now - state.startTs;
+          state.startTs = null;
+          setPlaying(false);
+        } else {
+          // Play (or replay if finished)
+          if (finished) { handleReplay(); return; }
+          setPlaying(true);
+          animRef.current.startTs = null;
+          animRef.current.raf = requestAnimationFrame(step);
+        }
+      };
+
+      // IntersectionObserver: autoplay when the map scrolls into view (or immediately, if already visible).
+      // Fires once per "pending" flag — set by loadRace when a new race is loaded.
+      React.useEffect(() => {
+        if (!mapContainerRef.current) return;
+        const el = mapContainerRef.current;
+        const maybeStart = () => {
+          if (!autoPlayPendingRef.current) return;
+          if (playingRef.current || finishedRef.current) return;
+          if (animRef.current.trips.length === 0) return;
+          autoPlayPendingRef.current = false;
+          setPlaying(true);
+          animRef.current.startTs = null;
+          animRef.current.raf = requestAnimationFrame(step);
+        };
+        const observer = new IntersectionObserver(entries => {
+          entries.forEach(e => { if (e.isIntersecting) maybeStart(); });
+        }, { threshold: 0.3 });
+        observer.observe(el);
+        // Also poll briefly in case the map loaded while already on-screen — IntersectionObserver fires
+        // on setup too, but we want a small grace period for stats/trips to populate.
+        const t1 = setTimeout(maybeStart, 300);
+        const t2 = setTimeout(maybeStart, 900);
+        return () => { observer.disconnect(); clearTimeout(t1); clearTimeout(t2); };
+      }, [step]);
+
+
+      const handleReplay = () => {
+        if (!stats) return;
+        // Reset animation
+        const state = animRef.current;
+        if (state.raf) cancelAnimationFrame(state.raf);
+        state.raf = null;
+        state.startTs = null;
+        state.pausedElapsed = 0;
+        for (const t of state.trips) {
+          t.trailLayer.setLatLngs([]);
+          t.dotLayer.setLatLng(t.trip.h);
+          t.arrived = false;
+        }
+        setClock('0:00');
+        setArrivedTeams(new Set());
+        setFinished(false);
+        setPlaying(true);
+        state.raf = requestAnimationFrame(step);
+      };
+
+      if (!races) {
+        return (
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            {title && <h2 className="text-xl font-bold text-gray-800 mb-2">{title}</h2>}
+            <p className="text-gray-500">Loading route data…</p>
+          </div>
+        );
+      }
+
+      if (races.length === 0) {
+        return (
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            {title && <h2 className="text-xl font-bold text-gray-800 mb-2">{title}</h2>}
+            <p className="text-gray-500">No route data available for this selection.</p>
+          </div>
+        );
+      }
+
+      return (
+        <div className={compact ? '' : 'space-y-6'}>
+          <div className={`bg-white rounded-lg shadow-lg ${compact ? 'p-4' : 'p-4 md:p-6'}`}>
+            {(title || description) && (
+              <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3 mb-4">
+                <div>
+                  {title && <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-1">{title}</h2>}
+                  {description && <p className="text-sm text-gray-500">{description}</p>}
+                </div>
+              </div>
+            )}
+
+            <div className="flex flex-wrap gap-3 items-center mb-4">
+              {races.length > 1 && (
+                <div className="flex items-center gap-2">
+                  <label className="text-xs uppercase tracking-wide text-gray-500 font-semibold">Race</label>
+                  <select
+                    value={selectedDate || ''}
+                    onChange={e => setSelectedDate(e.target.value)}
+                    className="border border-gray-300 rounded px-3 py-1.5 text-sm min-w-[240px] bg-white"
+                  >
+                    {races.map(r => (
+                      <option key={r.date} value={r.date}>{r.date} — {r.venue} ({r.city})</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handlePlay}
+                  disabled={!stats}
+                  className={`px-4 py-1.5 rounded font-semibold text-sm text-white ${playing ? 'bg-amber-600 hover:bg-amber-700' : 'bg-green-600 hover:bg-green-700'} disabled:bg-gray-300`}
+                >
+                  {playing ? '❚❚ Pause' : (finished ? '↻ Play Again' : '▶ Play')}
+                </button>
+                <button
+                  onClick={handleReplay}
+                  disabled={!stats}
+                  className="px-3 py-1.5 rounded font-semibold text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 disabled:opacity-50"
+                >
+                  ↻ Replay
+                </button>
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-xs uppercase tracking-wide text-gray-500 font-semibold">Speed</label>
+                <input
+                  type="range" min="0.5" max="5" step="0.5"
+                  value={speed}
+                  onChange={e => setSpeed(parseFloat(e.target.value))}
+                  className="w-24"
+                />
+                <span className="text-sm text-gray-700 tabular-nums min-w-[24px]">{speed}×</span>
+              </div>
+            </div>
+
+            <div className={`grid grid-cols-1 gap-4 ${showSidebar ? 'lg:grid-cols-[1fr_280px]' : ''}`}>
+              <div className="relative">
+                <div ref={mapContainerRef} style={{ width: '100%', height, borderRadius: '8px', overflow: 'hidden' }} />
+              </div>
+
+              {showSidebar && (
+              <div className="space-y-3">
+                <div className="bg-gray-900 text-white rounded-lg p-4 text-center">
+                  <div className="text-4xl font-bold tabular-nums">{clock}</div>
+                  <div className="text-xs text-gray-400 uppercase tracking-wide mt-1">Elapsed drive time</div>
+                </div>
+
+                {stats && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="bg-gray-50 rounded p-2">
+                      <div className="text-xs text-gray-500 uppercase">Teams</div>
+                      <div className="text-lg font-bold text-gray-800">{stats.teamCount}</div>
+                    </div>
+                    <div className="bg-gray-50 rounded p-2">
+                      <div className="text-xs text-gray-500 uppercase">Longest</div>
+                      <div className="text-lg font-bold text-gray-800">{formatTime(stats.longestMin)}</div>
+                    </div>
+                    <div className="bg-gray-50 rounded p-2">
+                      <div className="text-xs text-gray-500 uppercase">Shortest</div>
+                      <div className="text-lg font-bold text-gray-800">{formatTime(stats.shortestMin)}</div>
+                    </div>
+                    <div className="bg-gray-50 rounded p-2">
+                      <div className="text-xs text-gray-500 uppercase">Fleet-hrs</div>
+                      <div className="text-lg font-bold text-gray-800">{(stats.fleetMinutes / 60).toFixed(0)}</div>
+                    </div>
+                  </div>
+                )}
+
+                {stats && (
+                  <div>
+                    <div className="text-xs text-gray-500 uppercase tracking-wide font-semibold mb-2">Arrival Order</div>
+                    <div className="max-h-[340px] overflow-y-auto border border-gray-200 rounded">
+                      {stats.sortedTrips.map(t => {
+                        const arrived = arrivedTeams.has(t.trip.t);
+                        return (
+                          <div key={t.trip.t} className={`flex items-center justify-between px-2 py-1.5 text-xs border-b border-gray-100 ${arrived ? 'bg-green-50' : ''}`}>
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="w-1 h-4 flex-shrink-0" style={{ backgroundColor: t.color }}></span>
+                              <span className={`truncate ${arrived ? 'text-green-700 font-semibold' : 'text-gray-700'}`}>{arrived && '✓ '}{t.trip.t}</span>
+                            </div>
+                            <span className={`tabular-nums ml-2 ${arrived ? 'text-green-600' : 'text-gray-500'}`}>{formatTime(t.trip.m)}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // TeamJourneyMap: animated map showing one team fanning out to every race they've attended.
+    // Inverted convergence: one origin (team home), many destinations (venues).
+    function TeamJourneyMap({ teamName, teamHome, routesData }) {
+      const [speed, setSpeed] = useState(1);
+      const [clock, setClock] = useState('0/0');
+      const [playing, setPlaying] = useState(false);
+      const [finished, setFinished] = useState(false);
+      const [arrivedVenues, setArrivedVenues] = useState(() => new Set());
+
+      const mapContainerRef = React.useRef(null);
+      const mapRef = React.useRef(null);
+      const animRef = React.useRef({ trips: [], venueMarkers: [], homeMarker: null, startTs: null, pausedElapsed: 0, raf: null, longestMin: 0 });
+      const speedRef = React.useRef(speed);
+      const autoPlayPendingRef = React.useRef(false);
+      const playingRef = React.useRef(false);
+      const finishedRef = React.useRef(false);
+      React.useEffect(() => { speedRef.current = speed; }, [speed]);
+      React.useEffect(() => { playingRef.current = playing; }, [playing]);
+      React.useEffect(() => { finishedRef.current = finished; }, [finished]);
+
+      const ANIM_BASE_SECONDS = 10;
+      const animDurationMs = () => (ANIM_BASE_SECONDS / speedRef.current) * 1000;
+
+      // Build trips for this team from routesData
+      const teamTrips = React.useMemo(() => {
+        if (!routesData || !teamName) return null;
+        const trips = [];
+        for (const race of routesData.races) {
+          const myTrip = race.trips.find(t => t.t === teamName);
+          if (myTrip) {
+            trips.push({
+              raceDate: race.date,
+              venue: race.venue,
+              city: race.city,
+              venueLoc: race.vl,
+              route: myTrip.p,
+              minutes: myTrip.m,
+              miles: myTrip.d,
+              riders: myTrip.r,
+            });
+          }
+        }
+        return trips;
+      }, [routesData, teamName]);
+
+      // Init map
+      React.useEffect(() => {
+        if (!mapContainerRef.current || mapRef.current) return;
+        const m = L.map(mapContainerRef.current, { preferCanvas: true, zoomControl: true }).setView([47.5, -120.5], 7);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
+          attribution: '© OpenStreetMap © CARTO', subdomains: 'abcd', maxZoom: 19,
+        }).addTo(m);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', {
+          subdomains: 'abcd', maxZoom: 19, pane: 'shadowPane',
+        }).addTo(m);
+        mapRef.current = m;
+        setTimeout(() => { if (mapRef.current) mapRef.current.invalidateSize(); }, 100);
+        return () => {
+          if (animRef.current.raf) cancelAnimationFrame(animRef.current.raf);
+          if (mapRef.current) { mapRef.current.remove(); mapRef.current = null; }
+        };
+      }, []);
+
+      // Load team's journey when team changes
+      const loadJourney = React.useCallback(() => {
+        if (!teamTrips || !teamHome || !mapRef.current) return;
+        const map = mapRef.current;
+
+        if (animRef.current.raf) cancelAnimationFrame(animRef.current.raf);
+        animRef.current.raf = null;
+        animRef.current.startTs = null;
+        animRef.current.pausedElapsed = 0;
+
+        for (const t of animRef.current.trips) {
+          if (t.trailLayer) map.removeLayer(t.trailLayer);
+          if (t.dotLayer) map.removeLayer(t.dotLayer);
+        }
+        for (const m of animRef.current.venueMarkers) map.removeLayer(m);
+        if (animRef.current.homeMarker) map.removeLayer(animRef.current.homeMarker);
+
+        if (teamTrips.length === 0) {
+          animRef.current.trips = [];
+          animRef.current.venueMarkers = [];
+          animRef.current.homeMarker = null;
+          setClock('0/0');
+          setArrivedVenues(new Set());
+          setFinished(false);
+          return;
+        }
+
+        const longestMin = Math.max(...teamTrips.map(t => t.minutes));
+
+        const trips = teamTrips.map((trip, i) => {
+          const route = precomputeRoute(trip.route);
+          const color = RACE_DAY_PALETTE[i % RACE_DAY_PALETTE.length];
+          const trailLayer = L.polyline([], { color, weight: 3, opacity: 0.85, lineCap: 'round', lineJoin: 'round' }).addTo(map);
+          const dotLayer = L.circleMarker([teamHome.lat, teamHome.lng], { radius: 5, color: '#fff', weight: 2, fillColor: color, fillOpacity: 1 }).addTo(map);
+          dotLayer.bindTooltip(`${trip.raceDate} → ${trip.venue}`, { direction: 'top', offset: [0, -8] });
+          return { trip, route, color, trailLayer, dotLayer, arrived: false, key: trip.raceDate + '|' + trip.venue };
+        });
+
+        const venueMarkers = teamTrips.map(trip =>
+          L.circleMarker(trip.venueLoc, { radius: 4, color: '#f85149', weight: 1.5, fillColor: '#f85149', fillOpacity: 0.8 })
+            .bindTooltip(`${trip.venue} (${trip.city}) — ${trip.raceDate}`, { direction: 'top', offset: [0, -6] })
+            .addTo(map)
+        );
+
+        const homeMarker = L.marker([teamHome.lat, teamHome.lng], {
+          icon: L.divIcon({
+            className: 'race-day-venue-icon',
+            html: `<div style="background:#2f81f7;color:white;padding:4px 8px;border-radius:4px;font-size:11px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,0.5);white-space:nowrap;">🏠 ${teamName}</div>`,
+            iconAnchor: [40, 12],
+          })
+        }).addTo(map);
+
+        const allPoints = teamTrips.flatMap(t => t.route).concat([[teamHome.lat, teamHome.lng]]);
+        map.fitBounds(L.latLngBounds(allPoints), { padding: [40, 40] });
+
+        animRef.current = { ...animRef.current, trips, venueMarkers, homeMarker, longestMin };
+
+        setClock(`0/${teamTrips.length}`);
+        setArrivedVenues(new Set());
+        setPlaying(false);
+        setFinished(false);
+        autoPlayPendingRef.current = true;
+      }, [teamTrips, teamHome, teamName]);
+
+      React.useEffect(() => { loadJourney(); }, [loadJourney]);
+
+      const step = React.useCallback((timestamp) => {
+        const state = animRef.current;
+        if (state.startTs === null) state.startTs = timestamp - state.pausedElapsed;
+        const elapsed = timestamp - state.startTs;
+        const dur = animDurationMs();
+        const progress = Math.min(1, elapsed / dur);
+
+        const newlyArrived = new Set();
+        let arrivedCount = 0;
+        for (const t of state.trips) {
+          const frac = Math.min(1, progress * (state.longestMin / t.trip.minutes));
+          const pt = pointAt(t.route, frac);
+          const target = frac * t.route.total;
+          const trail = [];
+          for (let i = 0; i < t.route.points.length; i++) {
+            if (t.route.cum[i] <= target) trail.push(t.route.points[i]);
+            else break;
+          }
+          trail.push(pt);
+          t.trailLayer.setLatLngs(trail);
+          t.dotLayer.setLatLng(pt);
+          if (frac >= 1) {
+            arrivedCount++;
+            if (!t.arrived) {
+              t.arrived = true;
+              newlyArrived.add(t.key);
+            }
+          }
+        }
+
+        if (newlyArrived.size > 0) {
+          setArrivedVenues(prev => {
+            const next = new Set(prev);
+            newlyArrived.forEach(k => next.add(k));
+            return next;
+          });
+        }
+
+        setClock(`${arrivedCount}/${state.trips.length}`);
+
+        if (progress >= 1) {
+          state.raf = null;
+          state.startTs = null;
+          state.pausedElapsed = 0;
+          setPlaying(false);
+          setFinished(true);
+          return;
+        }
+        state.raf = requestAnimationFrame(step);
+      }, []);
+
+      const handlePlay = () => {
+        if (!teamTrips || teamTrips.length === 0) return;
+        if (playing) {
+          const state = animRef.current;
+          if (state.raf) cancelAnimationFrame(state.raf);
+          state.raf = null;
+          const now = performance.now();
+          if (state.startTs !== null) state.pausedElapsed = now - state.startTs;
+          state.startTs = null;
+          setPlaying(false);
+        } else {
+          if (finished) { handleReplay(); return; }
+          setPlaying(true);
+          animRef.current.startTs = null;
+          animRef.current.raf = requestAnimationFrame(step);
+        }
+      };
+
+      const handleReplay = () => {
+        if (!teamTrips || teamTrips.length === 0) return;
+        const state = animRef.current;
+        if (state.raf) cancelAnimationFrame(state.raf);
+        state.raf = null;
+        state.startTs = null;
+        state.pausedElapsed = 0;
+        for (const t of state.trips) {
+          t.trailLayer.setLatLngs([]);
+          t.dotLayer.setLatLng([teamHome.lat, teamHome.lng]);
+          t.arrived = false;
+        }
+        setClock(`0/${state.trips.length}`);
+        setArrivedVenues(new Set());
+        setFinished(false);
+        setPlaying(true);
+        state.raf = requestAnimationFrame(step);
+      };
+
+      // IntersectionObserver: autoplay when the map scrolls into view after a new team is loaded.
+      React.useEffect(() => {
+        if (!mapContainerRef.current) return;
+        const el = mapContainerRef.current;
+        const maybeStart = () => {
+          if (!autoPlayPendingRef.current) return;
+          if (playingRef.current || finishedRef.current) return;
+          if (animRef.current.trips.length === 0) return;
+          autoPlayPendingRef.current = false;
+          setPlaying(true);
+          animRef.current.startTs = null;
+          animRef.current.raf = requestAnimationFrame(step);
+        };
+        const observer = new IntersectionObserver(entries => {
+          entries.forEach(e => { if (e.isIntersecting) maybeStart(); });
+        }, { threshold: 0.3 });
+        observer.observe(el);
+        const t1 = setTimeout(maybeStart, 300);
+        const t2 = setTimeout(maybeStart, 900);
+        return () => { observer.disconnect(); clearTimeout(t1); clearTimeout(t2); };
+      }, [step]);
+
+      if (!routesData) {
+        return (
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <h2 className="text-xl font-bold text-gray-800 mb-2">🗺️ Travel Journey</h2>
+            <p className="text-gray-500">Loading route data…</p>
+          </div>
+        );
+      }
+
+      const sortedTrips = teamTrips ? [...teamTrips].sort((a, b) => a.minutes - b.minutes) : [];
+
+      return (
+        <div className="bg-white rounded-lg shadow-lg p-4 md:p-6">
+          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3 mb-4">
+            <div>
+              <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-1">🗺️ Travel Journey — {teamName}</h2>
+              <p className="text-sm text-gray-500">Every race this team has driven to, fanning out from home at real-drive-time proportions.</p>
+            </div>
+          </div>
+
+          {teamTrips && teamTrips.length === 0 ? (
+            <p className="text-gray-500">No route data available for this team yet.</p>
+          ) : (
+            <>
+              <div className="flex flex-wrap gap-3 items-center mb-4">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handlePlay}
+                    disabled={!teamTrips}
+                    className={`px-4 py-1.5 rounded font-semibold text-sm text-white ${playing ? 'bg-amber-600 hover:bg-amber-700' : 'bg-green-600 hover:bg-green-700'} disabled:bg-gray-300`}
+                  >
+                    {playing ? '❚❚ Pause' : (finished ? '↻ Play Again' : '▶ Play')}
+                  </button>
+                  <button
+                    onClick={handleReplay}
+                    disabled={!teamTrips}
+                    className="px-3 py-1.5 rounded font-semibold text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 disabled:opacity-50"
+                  >
+                    ↻ Replay
+                  </button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-xs uppercase tracking-wide text-gray-500 font-semibold">Speed</label>
+                  <input type="range" min="0.5" max="5" step="0.5" value={speed} onChange={e => setSpeed(parseFloat(e.target.value))} className="w-24" />
+                  <span className="text-sm text-gray-700 tabular-nums min-w-[24px]">{speed}×</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4">
+                <div className="relative">
+                  <div ref={mapContainerRef} style={{ width: '100%', height: '520px', borderRadius: '8px', overflow: 'hidden' }} />
+                </div>
+
+                <div className="space-y-3">
+                  <div className="bg-gray-900 text-white rounded-lg p-4 text-center">
+                    <div className="text-4xl font-bold tabular-nums">{clock}</div>
+                    <div className="text-xs text-gray-400 uppercase tracking-wide mt-1">Arrivals / Total</div>
+                  </div>
+
+                  {teamTrips && (
+                    <div>
+                      <div className="text-xs text-gray-500 uppercase tracking-wide font-semibold mb-2">Venues (closest first)</div>
+                      <div className="max-h-[400px] overflow-y-auto border border-gray-200 rounded">
+                        {sortedTrips.map(t => {
+                          const key = t.raceDate + '|' + t.venue;
+                          const arrived = arrivedVenues.has(key);
+                          // Find the original color by matching position in teamTrips
+                          const origIdx = teamTrips.findIndex(x => x.raceDate === t.raceDate && x.venue === t.venue);
+                          const color = RACE_DAY_PALETTE[origIdx % RACE_DAY_PALETTE.length];
+                          return (
+                            <div key={key} className={`flex items-center justify-between px-2 py-1.5 text-xs border-b border-gray-100 ${arrived ? 'bg-green-50' : ''}`}>
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="w-1 h-4 flex-shrink-0" style={{ backgroundColor: color }}></span>
+                                <span className={`truncate ${arrived ? 'text-green-700 font-semibold' : 'text-gray-700'}`}>{arrived && '✓ '}{t.venue}</span>
+                              </div>
+                              <span className={`tabular-nums ml-2 ${arrived ? 'text-green-600' : 'text-gray-500'}`}>{formatTime(t.minutes)}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      );
+    }
+
+    // RaceDayView: full-featured Race Day tab (all races, big map, sidebar)
+    function RaceDayView({ routesData }) {
+      const races = routesData ? routesData.races : null;
+      return (
+        <ConvergenceAnimation
+          races={races}
+          title="🏁 Race Day"
+          description="Every team leaves home at the same moment. Watch them converge on the venue at real-drive-time proportions."
+          height="600px"
+          compact={false}
+          showSidebar={true}
+        />
+      );
     }
 
     ReactDOM.render(<WSCLDashboard />, document.getElementById('root'));

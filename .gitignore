@@ -7,8 +7,8 @@ package-lock.json
 # Generated/cached files
 route_cache.json
 
-# Heatmap interactive HTMLs are huge (some 500MB+) — only commit the PNGs the dashboard uses
-heatmaps/*.html
+# Static heatmap artifacts — dashboard now uses interactive maps instead
+heatmaps/
 
 # Old dashboard versions
 wscl_dashboard_events*.html
