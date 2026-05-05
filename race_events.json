@@ -14,5 +14,21 @@
     "city": "Spokane",
     "state": "WA",
     "venue": "Riverside State Park"
+  },
+  "2026-04-26": {
+    "event_id": "393938",
+    "key": "366028566fd070b2f56ced516d52f5c1",
+    "name": "Cle Elum",
+    "city": "Cle Elum",
+    "state": "WA",
+    "venue": "Roslyn High School"
+  },
+  "2026-05-03": {
+    "event_id": "396362",
+    "key": "072afa208df0407290230488fcddc5ff",
+    "name": "Pedaling the Peninsula",
+    "city": "Gig Harbor",
+    "state": "WA",
+    "venue": "360 Trails"
   }
 }
