@@ -47,6 +47,9 @@ DB_EVENTS_JSON = os.path.join(RESULTS_DIR, "data", "events.json")
 RACE_EVENTS_JSON = os.path.join(SCRIPT_DIR, "race_events.json")
 ROUTE_CACHE = routes.CACHE_FILE
 
+# Tracker spellings for team names the results database spells differently.
+TEAM_RENAMES = {"Key Penninsula Composite": "Key Peninsula Composite"}
+
 RIDER_COUNT_SQL = """
     SELECT team, count(*) AS riders
     FROM results
@@ -204,7 +207,10 @@ def main():
     # --- Check and plan ---
     problems, plan = [], []
     for date in dates:
-        counts = dict(con.execute(RIDER_COUNT_SQL, (date,)).fetchall())
+        counts = {}
+        for team, n in con.execute(RIDER_COUNT_SQL, (date,)):
+            team = TEAM_RENAMES.get(team, team)
+            counts[team] = counts.get(team, 0) + n
         venue = venues.get(date)
         if not venue:
             problems.append(

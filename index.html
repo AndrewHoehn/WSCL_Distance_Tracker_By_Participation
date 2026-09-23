@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <title>WSCL Tracker — Miles, Hours, and Effort Behind Every WSCL Race</title>
-  <meta name="description" content="A leaderboard for the Washington Student Cycling League: how many miles each team drives, how much families spend on gas, and how many hours parents put into race-day travel. Over 1 million miles tracked since 2023.">
+  <meta name="description" content="A leaderboard for the Washington Student Cycling League: how many miles each team drives, what it costs families, and how many hours parents put into race-day travel. 1.46 million miles tracked since 2023.">
   <meta name="author" content="Andrew Hoehn">
   <meta name="robots" content="index, follow">
   <meta name="theme-color" content="#238636">
@@ -19,17 +19,17 @@
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://wscltracker.com/">
   <meta property="og:title" content="WSCL Tracker — The Miles Behind Every Race">
-  <meta property="og:description" content="Over 1 million miles, 870+ days on the road, and $849K in family gas — tracked since 2023. A leaderboard for the WSCL teams and families putting in the work to get kids to race day.">
+  <meta property="og:description" content="1.46 million miles, 1,089 days on the road, and $1.06M in family driving costs across 25 races since 2023. A leaderboard for the WSCL teams and families putting in the work to get kids to race day.">
   <meta property="og:site_name" content="WSCL Tracker">
   <meta property="og:image" content="https://wscltracker.com/og-image.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="WSCL Tracker: 1.17 million miles driven by WSCL families since 2023">
+  <meta property="og:image:alt" content="WSCL Tracker: 1.46 million miles driven by WSCL families since 2023">
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="WSCL Tracker — The Miles Behind Every Race">
-  <meta name="twitter:description" content="Over 1 million miles, 870+ days on the road, and $849K in family gas — tracked since 2023. A leaderboard for the WSCL teams and families putting in the work to get kids to race day.">
+  <meta name="twitter:description" content="1.46 million miles, 1,089 days on the road, and $1.06M in family driving costs across 25 races since 2023. A leaderboard for the WSCL teams and families putting in the work to get kids to race day.">
   <meta name="twitter:image" content="https://wscltracker.com/og-image.png">
 
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -67,7 +67,7 @@
       // Filters
       const [seasonFilter, setSeasonFilter] = useState('all');
       const [viewMode, setViewMode] = useState('actual');
-      const [metricMode, setMetricMode] = useState('total');
+      const [metricMode, setMetricMode] = useState('per_family');
       const [ridersPerVehicle, setRidersPerVehicle] = useState(2);
       
       // Venue view filters
@@ -172,7 +172,7 @@
                 </div>
               </div>
               <p className="text-sm text-gray-500 mt-3 border-t pt-3">
-                WSCL teams log serious miles getting to races across Washington and Idaho. This dashboard tracks every mile driven since 2023 — who's racking up the road trips, which venues keep everyone close (or don't), and what all that windshield time actually costs.
+                WSCL teams log serious miles getting to races across Washington and Idaho. This dashboard tracks every mile driven since 2023 — who's racking up the road trips, how unevenly the driving falls on families, which venues keep everyone close (or don't), and what all that windshield time actually costs.
               </p>
             </div>
 
@@ -188,6 +188,7 @@
                     {activeTab === 'leaderboard' && '📊 Team Leaderboard'}
                     {activeTab === 'raceday' && '🏁 Race Day'}
                     {activeTab === 'venues' && '📍 Venue Analysis'}
+                    {activeTab === 'turnout' && '📉 Distance & Turnout'}
                     {activeTab === 'teams' && '👥 Team Deep Dive'}
                     {activeTab === 'awards' && '🏆 Awards'}
                     {activeTab === 'costs' && '💰 Cost Analysis'}
@@ -238,6 +239,19 @@
                     }`}
                   >
                     📍 Venue Analysis
+                  </button>
+                  <button
+                    onClick={() => {
+                      setActiveTab('turnout');
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`w-full text-left px-6 py-4 font-semibold transition-colors ${
+                      activeTab === 'turnout'
+                        ? 'bg-blue-50 text-blue-600'
+                        : 'text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    📉 Distance & Turnout
                   </button>
                   <button
                     onClick={() => {
@@ -327,6 +341,16 @@
                   📍 Venue Analysis
                 </button>
                 <button
+                  onClick={() => setActiveTab('turnout')}
+                  className={`px-6 py-4 font-semibold transition-colors ${
+                    activeTab === 'turnout'
+                      ? 'text-blue-600 border-b-2 border-blue-600'
+                      : 'text-gray-600 hover:text-gray-800'
+                  }`}
+                >
+                  📉 Turnout
+                </button>
+                <button
                   onClick={() => setActiveTab('teams')}
                   className={`px-6 py-4 font-semibold transition-colors ${
                     activeTab === 'teams'
@@ -398,6 +422,8 @@
               />
             )}
 
+            {activeTab === 'turnout' && <TurnoutView data={data} />}
+
             {activeTab === 'teams' && (
               <TeamView
                 data={data}
@@ -454,10 +480,21 @@
 
       const leaderboard = calculateLeaderboard(filteredData, data, viewMode, metricMode, ridersPerVehicle);
 
-      const totalMiles = leaderboard.reduce((sum, team) => sum + team.miles, 0);
+      const perFamily = metricMode === 'per_family';
+      const fleetBoard = perFamily || metricMode === 'per_rider'
+        ? calculateLeaderboard(filteredData, data, viewMode, 'total', ridersPerVehicle)
+        : leaderboard;
+      const totalMiles = fleetBoard.reduce((sum, team) => sum + team.miles, 0);
       const totalRaceEntries = filteredData.reduce((sum, r) => sum + r.riders, 0);
       const totalIndependentEntries = filteredIndependent.reduce((sum, r) => sum + r.riders, 0);
       const totalEvents = new Set(filteredData.map(r => r.date)).size;
+
+      // Farthest vs closest family, among teams that raced at least a quarter of the races
+      const minRaces = Math.max(1, Math.ceil(totalEvents * 0.25));
+      const eligible = leaderboard.filter(t => t.races >= minRaces && t.miles > 0);
+      const farthest = eligible[0];
+      const closest = eligible[eligible.length - 1];
+      const gap = farthest && closest && closest.miles > 0 ? farthest.miles / closest.miles : 0;
 
       return (
         <>
@@ -506,9 +543,10 @@
                   value={metricMode}
                   onChange={(e) => setMetricMode(e.target.value)}
                   className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  title="Total: Sum of all miles. Per Entry: Round-trip distance per race entry."
+                  title="Per Family: one car's round trip per race. Total: every car the team sent. Per Entry: round-trip distance per race entry."
                 >
-                  <option value="total">Total Miles</option>
+                  <option value="per_family">Per Family (round trip per race)</option>
+                  <option value="total">Total Miles (all cars)</option>
                   <option value="per_rider">Avg Miles per Race Entry</option>
                 </select>
               </div>
@@ -524,11 +562,11 @@
                   value={ridersPerVehicle}
                   onChange={(e) => setRidersPerVehicle(Number(e.target.value))}
                   className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  disabled={metricMode === 'per_rider'}
+                  disabled={metricMode !== 'total'}
                 />
-                {metricMode === 'per_rider' && (
+                {metricMode !== 'total' && (
                   <div className="text-xs text-gray-500 mt-1">
-                    N/A for averages
+                    Only used for Total Miles
                   </div>
                 )}
               </div>
@@ -536,6 +574,14 @@
             
 
             {/* Metric Explanation */}
+            {perFamily && (
+              <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <p className="text-sm text-gray-700">
+                  <strong>Per Family:</strong> the round trip one family drives to an average race, {viewMode === 'actual' ? "counting the races their team attended" : 'if the team went to every race'}.
+                  Team size doesn't matter here, only where the team lives. This is the part of WSCL travel that falls on each household.
+                </p>
+              </div>
+            )}
             {metricMode === 'per_rider' && viewMode === 'actual' && (
               <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
                 <p className="text-sm text-gray-700">
@@ -549,6 +595,41 @@
           </div>
 
           {/* Summary Stats */}
+          {perFamily && farthest && closest ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
+            <div className="bg-white rounded-lg shadow-lg p-4 md:p-6">
+              <div className="text-xs md:text-sm text-gray-500 mb-1">Farthest-Driving Family</div>
+              <div className="text-xl md:text-3xl font-bold text-orange-600">
+                {farthest.miles.toLocaleString(undefined, { maximumFractionDigits: 0 })} mi
+              </div>
+              <div className="text-xs text-gray-500 mt-1">{farthest.name} · ${(farthest.miles * COST_PER_MILE).toFixed(0)} a race</div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-lg p-4 md:p-6">
+              <div className="text-xs md:text-sm text-gray-500 mb-1">Closest-Driving Family</div>
+              <div className="text-xl md:text-3xl font-bold text-green-600">
+                {closest.miles.toLocaleString(undefined, { maximumFractionDigits: 0 })} mi
+              </div>
+              <div className="text-xs text-gray-500 mt-1">{closest.name} · ${(closest.miles * COST_PER_MILE).toFixed(0)} a race</div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-lg p-4 md:p-6">
+              <div className="text-xs md:text-sm text-gray-500 mb-1">The Gap</div>
+              <div className="text-xl md:text-3xl font-bold text-purple-600">
+                {gap.toFixed(1)}×
+              </div>
+              <div className="text-xs text-gray-500 mt-1">farthest vs closest, every race</div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-lg p-4 md:p-6">
+              <div className="text-xs md:text-sm text-gray-500 mb-1">League Fleet Miles</div>
+              <div className="text-xl md:text-3xl font-bold text-blue-600">
+                {totalMiles.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+              </div>
+              <div className="text-xs text-gray-500 mt-1">all cars · {totalRaceEntries.toLocaleString()} rider-races · {totalEvents} races</div>
+            </div>
+          </div>
+          ) : (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
             <div className="bg-white rounded-lg shadow-lg p-4 md:p-6">
               <div className="text-xs md:text-sm text-gray-500 mb-1">Total Miles</div>
@@ -580,11 +661,16 @@
               <div className="text-xs text-gray-500 mt-1">Race dates</div>
             </div>
           </div>
+          )}
 
           {/* Leaderboard Table */}
           <div className="bg-white rounded-lg shadow-lg p-4 md:p-6 mb-6">
-            <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-1">Who's Logging the Most Miles?</h2>
-            <p className="text-sm text-gray-500 mb-4">Teams ranked by total driving distance. Spoiler: geography is not equally distributed.</p>
+            <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-1">{perFamily ? 'Which Families Drive the Farthest?' : "Who's Logging the Most Miles?"}</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              {perFamily
+                ? `Teams ranked by one family's round trip to an average race. Farthest and closest cards count teams with at least ${minRaces} race${minRaces !== 1 ? 's' : ''} in this period.`
+                : 'Teams ranked by total driving distance. Spoiler: geography is not equally distributed.'}
+            </p>
             
             <div className="overflow-x-auto -mx-4 md:mx-0">
               <table className="w-full min-w-[600px]">
@@ -592,8 +678,11 @@
                   <tr className="border-b-2 border-gray-200">
                     <th className="text-left py-2 md:py-3 px-2 md:px-4 font-semibold text-gray-700 text-sm md:text-base">Rank</th>
                     <th className="text-left py-2 md:py-3 px-2 md:px-4 font-semibold text-gray-700 text-sm md:text-base">Team</th>
-                    <th className="text-right py-2 md:py-3 px-2 md:px-4 font-semibold text-gray-700 text-sm md:text-base">Miles</th>
-                    <th className="text-right py-2 md:py-3 px-2 md:px-4 font-semibold text-gray-700 text-sm md:text-base">Time</th>
+                    <th className="text-right py-2 md:py-3 px-2 md:px-4 font-semibold text-gray-700 text-sm md:text-base">{perFamily ? 'Round Trip / Race' : 'Miles'}</th>
+                    <th className="text-right py-2 md:py-3 px-2 md:px-4 font-semibold text-gray-700 text-sm md:text-base">{perFamily ? 'Drive Time / Race' : 'Time'}</th>
+                    {perFamily && (
+                      <th className="text-right py-2 md:py-3 px-2 md:px-4 font-semibold text-gray-700 text-sm md:text-base" title="One car's round trips to every race in this period">One Car, All Races</th>
+                    )}
                     <th className="text-right py-2 md:py-3 px-2 md:px-4 font-semibold text-gray-700 text-sm md:text-base">Races</th>
                     {viewMode === 'actual' && (
                       <th className="text-right py-2 md:py-3 px-2 md:px-4 font-semibold text-gray-700 text-sm md:text-base" title="Total rider appearances across all races">Rider-Races</th>
@@ -618,6 +707,11 @@
                       <td className="py-2 md:py-3 px-2 md:px-4 text-right text-gray-600 text-sm md:text-base" style={{fontVariantNumeric: 'tabular-nums'}}>
                         {formatTime(team.minutes)}
                       </td>
+                      {perFamily && (
+                        <td className="py-2 md:py-3 px-2 md:px-4 text-right text-gray-600 text-sm md:text-base" style={{fontVariantNumeric: 'tabular-nums'}}>
+                          {team.totalMiles.toLocaleString(undefined, { maximumFractionDigits: 0 })} mi
+                        </td>
+                      )}
                       <td className="py-2 md:py-3 px-2 md:px-4 text-right text-gray-600 text-sm md:text-base" style={{fontVariantNumeric: 'tabular-nums'}}>{team.races}</td>
                       {viewMode === 'actual' && (
                         <td className="py-2 md:py-3 px-2 md:px-4 text-right text-gray-600 text-sm md:text-base" style={{fontVariantNumeric: 'tabular-nums'}}>{team.riders}</td>
@@ -631,7 +725,7 @@
 
           {/* Visual Chart */}
           <div className="bg-white rounded-lg shadow-lg p-4 md:p-6 mb-6">
-            <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-4">Road Trip Rankings — Top 15</h2>
+            <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-4">{perFamily ? 'Round Trip per Race — Top 15' : 'Road Trip Rankings — Top 15'}</h2>
             <div className="space-y-2">
               {leaderboard.slice(0, 15).map((team, index) => {
                 const maxMiles = leaderboard[0].miles;
@@ -664,7 +758,8 @@
 
     // VENUE VIEW
     function VenueView({ data, routesData, selectedVenue, setSelectedVenue, selectedEventDate, setSelectedEventDate }) {
-      const [venueCompareMode, setVenueCompareMode] = useState('theoretical');
+      const [venueCompareMode, setVenueCompareMode] = useState('weighted');
+      const riderWeights = React.useMemo(() => recentRidersByTeam(data), [data]);
       // Get unique venues
       const venues = {};
       Object.entries(data.event_locations).forEach(([date, event]) => {
@@ -720,6 +815,19 @@
           const totalRoundTripMiles = venueRecords.reduce((sum, r) => sum + r.round_trip_miles, 0);
           const avgMiles = venueRecords.length > 0 ? totalRoundTripMiles / venueRecords.length : 0;
           return { name: venueKey, venue: venue.venue, totalMiles: totalRoundTripMiles, avgMiles, raceCount };
+        } else if (venueCompareMode === 'weighted') {
+          // Weighted: avg round-trip per family, each team counted by its recent riders per race
+          let weighted = 0;
+          let totalWeight = 0;
+          Object.entries(riderWeights).forEach(([teamName, w]) => {
+            const dist = data.distances[teamName]?.[firstEventDate];
+            if (dist) {
+              weighted += dist.round_trip_miles * w;
+              totalWeight += w;
+            }
+          });
+          const avgMiles = totalWeight > 0 ? weighted / totalWeight : 0;
+          return { name: venueKey, venue: venue.venue, totalMiles: weighted, avgMiles, raceCount: venue.events.length };
         } else {
           // Theoretical: avg round-trip if every team attended
           let totalMiles = 0;
@@ -746,17 +854,25 @@
               <div>
                 <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-1">Which Venues Keep Everyone Closest?</h2>
                 <p className="text-sm text-gray-500">
-                  {venueCompareMode === 'theoretical'
-                    ? 'Average round-trip miles per team if every team attended. Lower = more centrally located.'
+                  {venueCompareMode === 'weighted'
+                    ? "Average family's round trip if every team came, with each team counted by its riders over the last 12 months. Lower = closer for more kids."
+                    : venueCompareMode === 'theoretical'
+                    ? 'Average round-trip miles per team if every team attended, every team counted equally. Lower = more centrally located.'
                     : 'Average round-trip miles per team that actually attended. Lower = closer for real attendees.'}
                 </p>
               </div>
               <div className="flex rounded-lg border border-gray-300 overflow-hidden text-sm shrink-0">
                 <button
+                  onClick={() => setVenueCompareMode('weighted')}
+                  className={`px-3 py-1.5 font-medium transition-colors ${venueCompareMode === 'weighted' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                >
+                  By Riders
+                </button>
+                <button
                   onClick={() => setVenueCompareMode('theoretical')}
                   className={`px-3 py-1.5 font-medium transition-colors ${venueCompareMode === 'theoretical' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
                 >
-                  Theoretical
+                  Every Team Equal
                 </button>
                 <button
                   onClick={() => setVenueCompareMode('actual')}
@@ -790,6 +906,8 @@
               })}
             </div>
           </div>
+
+          <SeasonBuilder data={data} venues={venues} venueList={venueList} />
 
           <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
             <h2 className="text-xl font-bold text-gray-800 mb-4">Venue Selection</h2>
@@ -1054,29 +1172,33 @@
               {/* Key Statistics */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
                 <div className="bg-white rounded-lg shadow-lg p-3 md:p-4">
-                  <div className="text-xs text-gray-500 mb-1">Races</div>
+                  <div className="text-xs text-gray-500 mb-1">Races Attended</div>
                   <div className="text-xl md:text-2xl font-bold text-purple-600">{racesAttended}</div>
+                  <div className="text-xs text-gray-400 mt-1">of {allDistances.length} on the calendar</div>
                 </div>
                 
                 <div className="bg-white rounded-lg shadow-lg p-3 md:p-4">
-                  <div className="text-xs text-gray-500 mb-1">Avg/Race</div>
+                  <div className="text-xs text-gray-500 mb-1">Riders per Race</div>
                   <div className="text-xl md:text-2xl font-bold text-green-600">
                     {avgRidersPerRace.toLocaleString(undefined, { maximumFractionDigits: 1 })}
                   </div>
+                  <div className="text-xs text-gray-400 mt-1">average finishers</div>
                 </div>
                 
                 <div className="bg-white rounded-lg shadow-lg p-3 md:p-4">
-                  <div className="text-xs text-gray-500 mb-1">Avg Theory</div>
+                  <div className="text-xs text-gray-500 mb-1">Family Round Trip</div>
                   <div className="text-xl md:text-2xl font-bold text-blue-600">
                     {avgTheoreticalMiles.toLocaleString(undefined, { maximumFractionDigits: 0 })} mi
                   </div>
+                  <div className="text-xs text-gray-400 mt-1">one car, average race</div>
                 </div>
                 
                 <div className="bg-white rounded-lg shadow-lg p-3 md:p-4">
-                  <div className="text-xs text-gray-500 mb-1">Avg Actual</div>
+                  <div className="text-xs text-gray-500 mb-1">Team Miles per Race</div>
                   <div className="text-xl md:text-2xl font-bold text-orange-600">
                     {avgMilesPerRace.toLocaleString(undefined, { maximumFractionDigits: 0 })} mi
                   </div>
+                  <div className="text-xs text-gray-400 mt-1">all cars, {data.metadata.riders_per_vehicle} riders per car</div>
                 </div>
               </div>
 
@@ -1588,7 +1710,7 @@
             <section>
               <h3 className="text-xl font-bold text-gray-800 mb-3">Where the data comes from</h3>
               <ul className="list-disc pl-6 text-gray-700 space-y-2">
-                <li><strong>Attendance</strong> is scraped from WSCL's public race results — each rider's listed team gets credit for one rider-race on that date.</li>
+                <li><strong>Attendance</strong> comes from WSCL's public race results — every competitive finisher gets their team credit for one rider-race on that date. Coaches races and relays aren't counted.</li>
                 <li><strong>Team home bases</strong> are the city & ZIP associated with each team (Palouse Composite lives in Moscow, ID; Yakima lives in Yakima; and so on).</li>
                 <li><strong>Driving distances and routes</strong> come from Google Maps. Actual roads, not crow-flies.</li>
                 <li><strong>Upcoming races</strong> get projected distances (same venue = same miles) but no attendance until they happen.</li>
@@ -1599,6 +1721,15 @@
               <h3 className="text-xl font-bold text-gray-800 mb-3">How the numbers get calculated</h3>
 
               <div className="space-y-4">
+                <div className="border-l-4 border-orange-500 pl-4">
+                  <h4 className="font-bold text-gray-800 mb-1">Leaderboard (per family) — the default</h4>
+                  <p className="text-gray-700">
+                    One car's round trip to an average race the team attended. Team size drops out entirely, so this is
+                    the part of the driving that lands on each household. The farthest-vs-closest gap only counts teams
+                    that made at least a quarter of the races, so a team that showed up once can't skew it.
+                  </p>
+                </div>
+
                 <div className="border-l-4 border-blue-500 pl-4">
                   <h4 className="font-bold text-gray-800 mb-1">Leaderboard (total vehicle-miles)</h4>
                   <p className="text-gray-700">
@@ -1621,7 +1752,18 @@
                   <p className="text-gray-700">
                     <strong>Theoretical</strong> asks: if every WSCL team showed up, what's the average round-trip?
                     Pure geography — the most central venue wins. <strong>Actual</strong> uses the teams that really
-                    showed up. Both answer legitimate versions of "where does the league drive the least."
+                    showed up. <strong>By Riders</strong> (the default) is theoretical with each team counted by its
+                    average riders per race over the last 12 months, so a venue near a 40-kid team beats a venue near a
+                    4-kid team. All three answer legitimate versions of "where does the league drive the least."
+                  </p>
+                </div>
+
+                <div className="border-l-4 border-amber-500 pl-4">
+                  <h4 className="font-bold text-gray-800 mb-1">Distance &amp; turnout</h4>
+                  <p className="text-gray-700">
+                    For every team and spring season with at least three races, each race's rider count is divided by
+                    that team's median for the season. 100% means a normal turnout for that team. Those shares are then
+                    averaged by how long the one-way drive was. Fall seasons are too short to set a baseline.
                   </p>
                 </div>
               </div>
@@ -1632,7 +1774,7 @@
               <div className="space-y-3">
                 <div className="flex gap-3 items-start">
                   <span className="text-lg shrink-0">📊</span>
-                  <div><strong>Team Leaderboard</strong> — who's logging the most miles, by season or all-time. Toggle actual vs theoretical (what if every team went to every race).</div>
+                  <div><strong>Team Leaderboard</strong> — which families drive the farthest to an average race, and how big the gap is. Switch to total miles to see whole-team fleets, by season or all-time.</div>
                 </div>
                 <div className="flex gap-3 items-start">
                   <span className="text-lg shrink-0">🏁</span>
@@ -1640,7 +1782,11 @@
                 </div>
                 <div className="flex gap-3 items-start">
                   <span className="text-lg shrink-0">📍</span>
-                  <div><strong>Venue Analysis</strong> — which venues keep everyone closest, with an animated map for each one.</div>
+                  <div><strong>Venue Analysis</strong> — which venues keep everyone closest, a season builder for trying out schedules, and an animated map for each venue.</div>
+                </div>
+                <div className="flex gap-3 items-start">
+                  <span className="text-lg shrink-0">📉</span>
+                  <div><strong>Distance &amp; Turnout</strong> — do teams bring fewer kids to far-away races? (Yes, noticeably.)</div>
                 </div>
                 <div className="flex gap-3 items-start">
                   <span className="text-lg shrink-0">👥</span>
@@ -1712,6 +1858,520 @@
     }
 
     // UTILITY FUNCTIONS
+    // ============================================================
+    // Distance & Turnout: do teams bring fewer riders to far races?
+    // ============================================================
+
+    const TURNOUT_BUCKETS = [
+      { label: 'Under 1.5 h', min: 0, max: 90 },
+      { label: '1.5 – 3 h', min: 90, max: 180 },
+      { label: '3 – 4.5 h', min: 180, max: 270 },
+      { label: 'Over 4.5 h', min: 270, max: Infinity },
+    ];
+    const ABOVE_USUAL = '#2563eb';
+    const BELOW_USUAL = '#ea580c';
+
+    // State championships are the last spring race of each year.
+    function championshipDates(travelData) {
+      const last = {};
+      travelData.forEach(r => {
+        if (r.season.startsWith('Spring') && (!last[r.season] || r.date > last[r.season])) last[r.season] = r.date;
+      });
+      return new Set(Object.values(last));
+    }
+
+    // Each team-race as a share of that team's median turnout that season.
+    // Seasons with fewer than 3 races, or a median under 5 riders, give no baseline.
+    function turnoutPoints(records) {
+      const groups = {};
+      records.forEach(r => {
+        const k = r.team + '|' + r.season;
+        (groups[k] = groups[k] || []).push(r);
+      });
+      const points = [];
+      Object.values(groups).forEach(rs => {
+        if (rs.length < 3) return;
+        const sorted = rs.map(r => r.riders).sort((a, b) => a - b);
+        const mid = Math.floor(sorted.length / 2);
+        const median = sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+        if (median < 5) return;
+        rs.forEach(r => points.push({ team: r.team, date: r.date, minutes: r.one_way_minutes, index: r.riders / median }));
+      });
+      return points;
+    }
+
+    function bucketTurnout(points) {
+      return TURNOUT_BUCKETS.map(b => {
+        const inBucket = points.filter(p => p.minutes >= b.min && p.minutes < b.max);
+        const mean = inBucket.length ? inBucket.reduce((s, p) => s + p.index, 0) / inBucket.length : null;
+        return { ...b, n: inBucket.length, teams: new Set(inBucket.map(p => p.team)).size, mean };
+      });
+    }
+
+    const pct = x => `${Math.round(x * 100)}%`;
+
+    function TurnoutView({ data }) {
+      const [excludeChamps, setExcludeChamps] = useState(false);
+      const [hovered, setHovered] = useState(null);
+
+      const champs = React.useMemo(() => championshipDates(data.travel_data), [data]);
+      const allPoints = React.useMemo(() => turnoutPoints(data.travel_data), [data]);
+      const noChampPoints = React.useMemo(
+        () => turnoutPoints(data.travel_data.filter(r => !champs.has(r.date))), [data, champs]);
+      const points = excludeChamps ? noChampPoints : allPoints;
+      const buckets = bucketTurnout(points);
+      const allBuckets = bucketTurnout(allPoints);
+      const noChampBuckets = bucketTurnout(noChampPoints);
+      const near = buckets[0].mean;
+      const far = buckets[buckets.length - 1].mean;
+
+      // Scale: symmetric around 100%, wide enough for the largest deviation
+      const maxDev = Math.max(0.2, ...buckets.filter(b => b.mean !== null).map(b => Math.abs(b.mean - 1))) * 1.15;
+      const barPct = b => (Math.abs(b.mean - 1) / maxDev) * 50;
+
+      // Team by team: near (< 3 h) vs far (>= 3 h), for teams with at least 2 of each
+      const teamRows = React.useMemo(() => {
+        const byTeam = {};
+        points.forEach(p => {
+          const t = (byTeam[p.team] = byTeam[p.team] || { near: [], far: [] });
+          (p.minutes < 180 ? t.near : t.far).push(p.index);
+        });
+        const avg = xs => xs.reduce((s, x) => s + x, 0) / xs.length;
+        return Object.entries(byTeam)
+          .filter(([, t]) => t.near.length >= 2 && t.far.length >= 2)
+          .map(([team, t]) => ({ team, nearN: t.near.length, farN: t.far.length, near: avg(t.near), far: avg(t.far), diff: avg(t.far) - avg(t.near) }))
+          .sort((a, b) => a.diff - b.diff);
+      }, [points]);
+      const points100 = t => Math.round(t.diff * 100);
+      const teamsLower = teamRows.filter(t => points100(t) < 0).length;
+
+      return (
+        <>
+          <div className="bg-white rounded-lg shadow-lg p-4 md:p-6 mb-6">
+            <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-1">Does Distance Cost Riders?</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              Every team has a usual turnout. This compares each race with that team's own usual that season, grouped by how long the drive was.
+            </p>
+
+            {near !== null && far !== null && (
+              <div className="bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-200 rounded-lg p-4 mb-5">
+                <p className="text-base md:text-lg text-gray-800">
+                  Teams bring <strong>{pct(near)}</strong> of their usual riders to races under 1.5 hours from home,
+                  and <strong>{pct(far)}</strong> to races more than 4.5 hours away.
+                </p>
+                <p className="text-sm text-gray-600 mt-2">
+                  {excludeChamps
+                    ? `With every race included, it's ${pct(allBuckets[0].mean)} versus ${pct(allBuckets[3].mean)}.`
+                    : `Leaving out state championships, the gap holds: ${pct(noChampBuckets[0].mean)} versus ${pct(noChampBuckets[3].mean)}.`}
+                </p>
+              </div>
+            )}
+
+            <label className="inline-flex items-center gap-2 text-sm text-gray-700 mb-4 cursor-pointer">
+              <input type="checkbox" checked={excludeChamps} onChange={e => setExcludeChamps(e.target.checked)} />
+              Leave out state championships
+            </label>
+
+            {/* Diverging bars around each team's usual turnout (100%) */}
+            <div className="relative" onMouseLeave={() => setHovered(null)}>
+              <div className="flex text-xs text-gray-500 mb-1">
+                <div className="w-24 md:w-28 shrink-0"></div>
+                <div className="flex-1 flex justify-between">
+                  <span>fewer riders than usual</span>
+                  <span>more than usual</span>
+                </div>
+              </div>
+              {buckets.map((b, i) => (
+                <div
+                  key={b.label}
+                  className={`flex items-center py-2 rounded ${hovered === i ? 'bg-gray-50' : ''}`}
+                  onMouseEnter={() => setHovered(i)}
+                  onFocus={() => setHovered(i)}
+                  tabIndex={0}
+                  aria-label={`${b.label} drive: ${b.mean === null ? 'no data' : pct(b.mean)} of usual turnout, ${b.n} team-races`}
+                >
+                  <div className="w-24 md:w-28 shrink-0 text-sm font-medium text-gray-700">{b.label}</div>
+                  <div className="flex-1 relative h-7">
+                    <div className="absolute top-0 bottom-0 left-1/2 w-px bg-gray-400"></div>
+                    {b.mean !== null && (
+                      <>
+                        <div
+                          className="absolute top-1 h-5"
+                          style={{
+                            backgroundColor: b.mean >= 1 ? ABOVE_USUAL : BELOW_USUAL,
+                            left: b.mean >= 1 ? '50%' : `${50 - barPct(b)}%`,
+                            width: `${barPct(b)}%`,
+                            borderRadius: b.mean >= 1 ? '0 4px 4px 0' : '4px 0 0 4px',
+                          }}
+                        ></div>
+                        <span
+                          className="absolute top-1 text-sm font-semibold text-gray-800 whitespace-nowrap"
+                          style={b.mean >= 1
+                            ? { left: `calc(${50 + barPct(b)}% + 6px)` }
+                            : { right: `calc(${50 + barPct(b)}% + 6px)` }}
+                        >
+                          {pct(b.mean)}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ))}
+              <div className="flex text-xs text-gray-500 mt-1">
+                <div className="w-24 md:w-28 shrink-0 text-gray-400">one-way drive</div>
+                <div className="flex-1 text-center">100% = the team's usual turnout that season</div>
+              </div>
+              {hovered !== null && buckets[hovered].mean !== null && (
+                <div className="mt-2 text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded px-3 py-2">
+                  <strong>{buckets[hovered].label}:</strong> {buckets[hovered].n} team-races across {buckets[hovered].teams} teams averaged {pct(buckets[hovered].mean)} of usual turnout.
+                </div>
+              )}
+            </div>
+
+            <div className="overflow-x-auto mt-5">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b-2 border-gray-200">
+                    <th className="text-left py-2 px-3 font-semibold text-gray-700">One-way drive</th>
+                    <th className="text-right py-2 px-3 font-semibold text-gray-700">Team-races</th>
+                    <th className="text-right py-2 px-3 font-semibold text-gray-700">Teams</th>
+                    <th className="text-right py-2 px-3 font-semibold text-gray-700">Turnout vs usual</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {buckets.map(b => (
+                    <tr key={b.label} className="border-b border-gray-100">
+                      <td className="py-2 px-3 text-gray-800">{b.label}</td>
+                      <td className="py-2 px-3 text-right text-gray-600" style={{fontVariantNumeric: 'tabular-nums'}}>{b.n}</td>
+                      <td className="py-2 px-3 text-right text-gray-600" style={{fontVariantNumeric: 'tabular-nums'}}>{b.teams}</td>
+                      <td className="py-2 px-3 text-right font-semibold text-gray-800" style={{fontVariantNumeric: 'tabular-nums'}}>{b.mean === null ? '–' : pct(b.mean)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-lg p-4 md:p-6 mb-6">
+            <h2 className="text-xl font-bold text-gray-800 mb-1">Team by Team</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              Turnout at races under 3 hours away versus 3 hours or more, for teams with at least two of each.
+              {teamRows.length > 0 && ` ${teamsLower} of ${teamRows.length} teams bring fewer riders to the far races.`}
+            </p>
+            <div className="overflow-x-auto -mx-4 md:mx-0">
+              <table className="w-full min-w-[520px] text-sm">
+                <thead>
+                  <tr className="border-b-2 border-gray-200">
+                    <th className="text-left py-2 px-3 font-semibold text-gray-700">Team</th>
+                    <th className="text-right py-2 px-3 font-semibold text-gray-700">Under 3 h</th>
+                    <th className="text-right py-2 px-3 font-semibold text-gray-700">3 h or more</th>
+                    <th className="text-right py-2 px-3 font-semibold text-gray-700">Difference</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {teamRows.map(t => (
+                    <tr key={t.team} className="border-b border-gray-100 hover:bg-gray-50">
+                      <td className="py-2 px-3 font-medium text-gray-800">{t.team}</td>
+                      <td className="py-2 px-3 text-right text-gray-600" style={{fontVariantNumeric: 'tabular-nums'}}>{pct(t.near)} <span className="text-gray-400">({t.nearN})</span></td>
+                      <td className="py-2 px-3 text-right text-gray-600" style={{fontVariantNumeric: 'tabular-nums'}}>{pct(t.far)} <span className="text-gray-400">({t.farN})</span></td>
+                      <td className="py-2 px-3 text-right font-semibold text-gray-800" style={{fontVariantNumeric: 'tabular-nums'}}>
+                        {points100(t) > 0 ? '+' : points100(t) < 0 ? '−' : ''}{Math.abs(points100(t))} pts
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-xs text-gray-400 mt-2">Numbers in parentheses are race counts. Small counts swing a lot.</p>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-lg p-4 md:p-6 mb-6">
+            <h2 className="text-lg font-bold text-gray-800 mb-2">What This Does and Doesn't Show</h2>
+            <ul className="text-sm text-gray-600 space-y-2 list-disc pl-5">
+              <li>Each team is compared only with itself in the same season, so big teams, small teams, and growing rosters don't skew it.</li>
+              <li>Fall seasons have one or two races, too few to set a team's usual turnout, so the numbers come from spring seasons.</li>
+              <li>It's a pattern, not proof. Far races also mean overnight stays, school conflicts, and early wake-ups, and this can't separate those from the miles themselves.</li>
+              <li>Riders are competitive finishers from the league's published results, so a rider who started and didn't finish isn't counted.</li>
+            </ul>
+          </div>
+        </>
+      );
+    }
+
+    // ============================================================
+    // Venue weighting and the season builder
+    // ============================================================
+
+    // Average riders per race for each team over the 12 months before the latest race.
+    function recentRidersByTeam(data) {
+      const latest = data.travel_data.reduce((m, r) => (r.date > m ? r.date : m), '');
+      const cutoff = new Date(latest + 'T12:00:00');
+      cutoff.setFullYear(cutoff.getFullYear() - 1);
+      const since = cutoff.toISOString().slice(0, 10);
+      const sums = {};
+      data.travel_data.filter(r => r.date > since).forEach(r => {
+        const t = (sums[r.team] = sums[r.team] || { riders: 0, races: 0 });
+        t.riders += r.riders;
+        t.races += 1;
+      });
+      const out = {};
+      Object.entries(sums).forEach(([team, t]) => { out[team] = t.riders / t.races; });
+      return out;
+    }
+
+    // Example seasons, found by checking every schedule that uses each venue at most once
+    const SEASON_EXAMPLES = [
+      { id: 'fair5', label: 'Fairest 5 races', races: 5, metric: 'gap', pick: 'min',
+        blurb: 'the smallest gap between the farthest- and closest-driving team' },
+      { id: 'least5', label: 'Least driving, 5 races', races: 5, metric: 'avg', pick: 'min',
+        blurb: 'the fewest miles for the typical family, weighting each team by its riders' },
+      { id: 'unfair5', label: 'Least fair, 5 races', races: 5, metric: 'gap', pick: 'max',
+        blurb: 'the biggest gap between the farthest- and closest-driving team' },
+      { id: 'most5', label: 'Most driving, 5 races', races: 5, metric: 'avg', pick: 'max',
+        blurb: 'the most miles for the typical family' },
+      { id: 'unfair2', label: 'Least fair, 2 races', races: 2, metric: 'gap', pick: 'max',
+        blurb: 'the biggest gap between the farthest- and closest-driving team' },
+      { id: 'most2', label: 'Most driving, 2 races', races: 2, metric: 'avg', pick: 'max',
+        blurb: 'the most miles for the typical family' },
+    ];
+
+    function combinations(items, k) {
+      if (k === 0) return [[]];
+      if (items.length < k) return [];
+      const [first, ...rest] = items;
+      return [...combinations(rest, k - 1).map(c => [first, ...c]), ...combinations(rest, k)];
+    }
+
+    function SeasonBuilder({ data, venues, venueList }) {
+      const weights = React.useMemo(() => recentRidersByTeam(data), [data]);
+      const seasonList = React.useMemo(() => {
+        const key = s => {
+          const m = s.match(/(Spring|Fall)\s+(\d{4})/);
+          return m ? parseInt(m[2]) * 2 + (m[1] === 'Fall' ? 1 : 0) : -Infinity;
+        };
+        return [...new Set(Object.keys(data.event_locations).map(getSeason))].sort((a, b) => key(b) - key(a));
+      }, [data]);
+      const venueOf = date => {
+        const e = data.event_locations[date];
+        return `${e.city}, ${e.state}`;
+      };
+      const presetCounts = season => {
+        const counts = {};
+        Object.keys(data.event_locations).filter(d => getSeason(d) === season).forEach(d => {
+          counts[venueOf(d)] = (counts[venueOf(d)] || 0) + 1;
+        });
+        return counts;
+      };
+      const defaultSeason = seasonList.find(s => s.startsWith('Spring')) || seasonList[0];
+      const [preset, setPreset] = useState(defaultSeason);
+      const [counts, setCounts] = useState(() => presetCounts(defaultSeason));
+      const [example, setExample] = useState(null);
+
+      const applyPreset = season => {
+        setPreset(season);
+        setCounts(presetCounts(season));
+        setExample(null);
+      };
+      const setCount = (venueKey, n) => {
+        setCounts(c => ({ ...c, [venueKey]: Math.max(0, Math.min(3, n)) }));
+        setExample(null);
+      };
+
+      // One family's round trips for a schedule, for every team active in the last year
+      const evaluate = schedule => {
+        const teams = Object.keys(weights).filter(t => data.distances[t]);
+        const rows = teams.map(team => {
+          let miles = 0, minutes = 0;
+          Object.entries(schedule).forEach(([venueKey, n]) => {
+            if (!n) return;
+            const dist = data.distances[team][venues[venueKey].events[0].date];
+            if (dist) { miles += dist.round_trip_miles * n; minutes += dist.round_trip_minutes * n; }
+          });
+          return { team, miles, minutes, weight: weights[team] };
+        }).sort((a, b) => b.miles - a.miles);
+        const totalWeight = rows.reduce((s, r) => s + r.weight, 0);
+        const avg = totalWeight ? rows.reduce((s, r) => s + r.miles * r.weight, 0) / totalWeight : 0;
+        const farthest = rows[0];
+        const closest = rows[rows.length - 1];
+        return { rows, avg, farthest, closest, gap: closest && closest.miles > 0 ? farthest.miles / closest.miles : 0 };
+      };
+
+      // Best and worst schedules for each example, from every combination of distinct venues
+      const examples = React.useMemo(() => {
+        const bySize = {};
+        const found = {};
+        SEASON_EXAMPLES.forEach(ex => {
+          if (!bySize[ex.races]) {
+            bySize[ex.races] = combinations(venueList, ex.races).map(combo => {
+              const schedule = Object.fromEntries(combo.map(v => [v, 1]));
+              return { combo, schedule, ...evaluate(schedule) };
+            });
+          }
+          const options = bySize[ex.races];
+          const best = options.reduce((a, b) => {
+            const better = ex.pick === 'min' ? b[ex.metric] < a[ex.metric] : b[ex.metric] > a[ex.metric];
+            return better ? b : a;
+          });
+          found[ex.id] = { ...ex, ...best, considered: options.length };
+        });
+        return found;
+      }, [data, weights, venueList]);
+      const applyExample = id => {
+        setCounts({ ...examples[id].schedule });
+        setExample(id);
+      };
+      const activeExample = example && examples[example];
+      const sameAs = activeExample && SEASON_EXAMPLES
+        .filter(ex => ex.id !== example && ex.races === activeExample.races)
+        .find(ex => examples[ex.id].combo.join('|') === activeExample.combo.join('|'));
+
+      const races = Object.values(counts).reduce((s, n) => s + n, 0);
+      const result = evaluate(counts);
+      const baseCounts = presetCounts(preset);
+      const baseline = evaluate(baseCounts);
+      const changed = venueList.some(v => (counts[v] || 0) !== (baseCounts[v] || 0));
+      const baseRaces = Object.values(baseCounts).reduce((s, n) => s + n, 0);
+      const comparable = changed && races === baseRaces;
+      const maxMiles = result.rows.length ? result.rows[0].miles : 1;
+      const fmt = x => x.toLocaleString(undefined, { maximumFractionDigits: 0 });
+      const delta = (now, base) => {
+        const d = now - base;
+        if (Math.abs(d) < 0.5) return null;
+        return <span className={d > 0 ? 'text-orange-600' : 'text-green-600'}>{d > 0 ? '+' : '−'}{fmt(Math.abs(d))}</span>;
+      };
+
+      return (
+        <div className="bg-white rounded-lg shadow-lg p-4 md:p-6 mb-6">
+          <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-1">Build a Season</h2>
+          <p className="text-sm text-gray-500 mb-4">
+            Pick the venues for a season and see what it asks of each family: one car's round trips to every race.
+            Starts from a real season; change the counts to try a different schedule.
+          </p>
+
+          <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Start from</label>
+              <select
+                value={preset}
+                onChange={e => applyPreset(e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 mb-4"
+              >
+                {seasonList.map(s => <option key={s} value={s}>{s} schedule</option>)}
+              </select>
+              <div className="text-sm font-semibold text-gray-700 mb-2">Or try an example</div>
+              <div className="flex flex-wrap gap-2 mb-4">
+                {SEASON_EXAMPLES.map(ex => (
+                  <button
+                    key={ex.id}
+                    onClick={() => applyExample(ex.id)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                      example === ex.id
+                        ? 'bg-blue-600 border-blue-600 text-white'
+                        : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    {ex.label}
+                  </button>
+                ))}
+              </div>
+              <div className="border border-gray-200 rounded-lg divide-y divide-gray-100">
+                {venueList.map(v => {
+                  const n = counts[v] || 0;
+                  return (
+                    <div key={v} className={`flex items-center justify-between px-3 py-2 ${n ? '' : 'opacity-60'}`}>
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium text-gray-800 truncate">{venues[v].venue}</div>
+                        <div className="text-xs text-gray-500">{v}</div>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          onClick={() => setCount(v, n - 1)}
+                          className="w-8 h-8 rounded border border-gray-300 text-gray-600 hover:bg-gray-50 disabled:opacity-40"
+                          disabled={n === 0}
+                          aria-label={`One fewer race at ${venues[v].venue}`}
+                        >−</button>
+                        <span className="w-6 text-center text-sm font-semibold text-gray-800" style={{fontVariantNumeric: 'tabular-nums'}}>{n}</span>
+                        <button
+                          onClick={() => setCount(v, n + 1)}
+                          className="w-8 h-8 rounded border border-gray-300 text-gray-600 hover:bg-gray-50 disabled:opacity-40"
+                          disabled={n === 3}
+                          aria-label={`One more race at ${venues[v].venue}`}
+                        >+</button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              {changed && (
+                <button onClick={() => applyPreset(preset)} className="mt-3 text-sm text-blue-600 hover:underline block">
+                  Reset to {preset} as raced
+                </button>
+              )}
+            </div>
+
+            <div>
+              {activeExample && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-sm text-gray-700">
+                  <strong>{activeExample.label}:</strong> {activeExample.combo.map(v => venues[v].venue).join(', ')}.
+                  {' '}Out of all {activeExample.considered} seasons that use {activeExample.races} different venues, this one has {activeExample.blurb}.
+                  {sameAs && <> It's the same schedule as <em>{sameAs.label.toLowerCase()}</em>.</>}
+                  {(example === 'least5' || example === 'unfair5') && examples.least5.combo.join('|') === examples.unfair5.combo.join('|') &&
+                    <> Keeping total driving low means racing where most teams live, which leaves the teams far from that cluster driving the most.</>}
+                </div>
+              )}
+              {races === 0 ? (
+                <div className="text-sm text-gray-500 p-6 text-center border border-dashed border-gray-300 rounded-lg">Add at least one race to see the season.</div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+                    <div className="bg-gray-50 rounded-lg p-3">
+                      <div className="text-xs text-gray-500">Races</div>
+                      <div className="text-2xl font-bold text-gray-800">{races}</div>
+                    </div>
+                    <div className="bg-gray-50 rounded-lg p-3">
+                      <div className="text-xs text-gray-500">Typical family</div>
+                      <div className="text-2xl font-bold text-blue-600">{fmt(result.avg)} mi</div>
+                      <div className="text-xs text-gray-500">{comparable ? <>vs {preset}: {delta(result.avg, baseline.avg) || 'same'}</> : 'weighted by riders'}</div>
+                    </div>
+                    <div className="bg-gray-50 rounded-lg p-3">
+                      <div className="text-xs text-gray-500">Farthest family</div>
+                      <div className="text-2xl font-bold text-orange-600">{fmt(result.farthest.miles)} mi</div>
+                      <div className="text-xs text-gray-500 truncate" title={result.farthest.team}>{result.farthest.team}</div>
+                    </div>
+                    <div className="bg-gray-50 rounded-lg p-3">
+                      <div className="text-xs text-gray-500">Gap</div>
+                      <div className="text-2xl font-bold text-purple-600">{result.gap ? `${result.gap.toFixed(1)}×` : '–'}</div>
+                      <div className="text-xs text-gray-500">
+                        {comparable && baseline.gap ? `${preset}: ${baseline.gap.toFixed(1)}×` : `vs ${result.closest.team}`}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="text-xs text-gray-500 mb-2">Season miles for one family, by team (cost at ${COST_PER_MILE}/mi)</div>
+                  <div className="space-y-1.5">
+                    {result.rows.map(r => (
+                      <div key={r.team} className="flex items-center gap-2" title={`${r.team}: ${fmt(r.miles)} mi, ${formatTime(r.minutes)} in the car, $${fmt(r.miles * COST_PER_MILE)}`}>
+                        <div className="w-28 md:w-40 text-xs md:text-sm text-gray-700 truncate shrink-0">{r.team}</div>
+                        <div className="flex-1 flex items-center gap-2 min-w-0">
+                          <div className="h-4 rounded-r bg-blue-500 transition-all duration-300" style={{ width: `${maxMiles ? (r.miles / maxMiles) * 70 : 0}%` }}></div>
+                          <span className="text-xs text-gray-700 whitespace-nowrap" style={{fontVariantNumeric: 'tabular-nums'}}>
+                            {fmt(r.miles)} mi · ${fmt(r.miles * COST_PER_MILE)}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-400 mt-3">
+                    Teams that raced in the last 12 months. "Typical family" weights each team by its average riders per race, so a 40-rider team counts more than a 4-rider team.
+                  </p>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     function calculateLeaderboard(filteredData, fullData, viewMode, metricMode, ridersPerVehicle) {
       const teamStats = {};
 
@@ -1727,7 +2387,11 @@
             };
           }
 
-          if (metricMode === 'per_rider') {
+          if (metricMode === 'per_family') {
+            // One family, one car, to every race the team attended
+            teamStats[record.team].miles += record.round_trip_miles;
+            teamStats[record.team].minutes += record.round_trip_minutes;
+          } else if (metricMode === 'per_rider') {
             // For averages: each rider travels the round-trip distance regardless of carpooling
             teamStats[record.team].miles += record.round_trip_miles * record.riders;
             teamStats[record.team].minutes += record.round_trip_minutes * record.riders;
@@ -1773,6 +2437,16 @@
           ...team,
           miles: team.riders > 0 ? team.miles / team.riders : 0,
           minutes: team.riders > 0 ? team.minutes / team.riders : 0
+        }));
+      }
+
+      // Per family: average round trip per race, keeping the one-car total alongside
+      if (metricMode === 'per_family') {
+        leaderboard = leaderboard.map(team => ({
+          ...team,
+          totalMiles: team.miles,
+          miles: team.races > 0 ? team.miles / team.races : 0,
+          minutes: team.races > 0 ? team.minutes / team.races : 0
         }));
       }
 
@@ -1895,7 +2569,7 @@
         if (!mapContainerRef.current || mapRef.current) return;
         const m = L.map(mapContainerRef.current, { preferCanvas: true, zoomControl: true }).setView([47.5, -120.5], 7);
         L.tileLayer(`https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png${cartoKey}`, {
-          attribution: '© OpenStreetMap © CARTO',
+          attribution: '© OpenStreetMap contributors, © CARTO',
           subdomains: 'abcd',
           maxZoom: 19,
         }).addTo(m);
@@ -2285,7 +2959,7 @@
         if (!mapContainerRef.current || mapRef.current) return;
         const m = L.map(mapContainerRef.current, { preferCanvas: true, zoomControl: true }).setView([47.5, -120.5], 7);
         L.tileLayer(`https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png${cartoKey}`, {
-          attribution: '© OpenStreetMap © CARTO', subdomains: 'abcd', maxZoom: 19,
+          attribution: '© OpenStreetMap contributors, © CARTO', subdomains: 'abcd', maxZoom: 19,
         }).addTo(m);
         L.tileLayer(`https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png${cartoKey}`, {
           subdomains: 'abcd', maxZoom: 19, pane: 'shadowPane',
@@ -2484,6 +3158,13 @@
       }
 
       const sortedTrips = teamTrips ? [...teamTrips].sort((a, b) => a.minutes - b.minutes) : [];
+      // One row per venue; races at the same venue share a drive time.
+      const venueRows = [];
+      sortedTrips.forEach(t => {
+        const row = venueRows.find(v => v.venue === t.venue && v.city === t.city);
+        if (row) row.trips.push(t);
+        else venueRows.push({ venue: t.venue, city: t.city, minutes: t.minutes, trips: [t] });
+      });
 
       return (
         <div className="bg-white rounded-lg shadow-lg p-4 md:p-6">
@@ -2537,19 +3218,21 @@
                     <div>
                       <div className="text-xs text-gray-500 uppercase tracking-wide font-semibold mb-2">Venues (closest first)</div>
                       <div className="max-h-[400px] overflow-y-auto border border-gray-200 rounded">
-                        {sortedTrips.map(t => {
-                          const key = t.raceDate + '|' + t.venue;
-                          const arrived = arrivedVenues.has(key);
+                        {venueRows.map(v => {
+                          const first = v.trips[0];
+                          const key = v.city + '|' + v.venue;
+                          const arrived = v.trips.some(t => arrivedVenues.has(t.raceDate + '|' + t.venue));
                           // Find the original color by matching position in teamTrips
-                          const origIdx = teamTrips.findIndex(x => x.raceDate === t.raceDate && x.venue === t.venue);
+                          const origIdx = teamTrips.findIndex(x => x.raceDate === first.raceDate && x.venue === first.venue);
                           const color = RACE_DAY_PALETTE[origIdx % RACE_DAY_PALETTE.length];
                           return (
                             <div key={key} className={`flex items-center justify-between px-2 py-1.5 text-xs border-b border-gray-100 ${arrived ? 'bg-green-50' : ''}`}>
                               <div className="flex items-center gap-2 min-w-0">
                                 <span className="w-1 h-4 flex-shrink-0" style={{ backgroundColor: color }}></span>
-                                <span className={`truncate ${arrived ? 'text-green-700 font-semibold' : 'text-gray-700'}`}>{arrived && '✓ '}{t.venue}</span>
+                                <span className={`truncate ${arrived ? 'text-green-700 font-semibold' : 'text-gray-700'}`}>{arrived && '✓ '}{v.venue}</span>
+                                {v.trips.length > 1 && <span className="text-gray-400 flex-shrink-0">×{v.trips.length}</span>}
                               </div>
-                              <span className={`tabular-nums ml-2 ${arrived ? 'text-green-600' : 'text-gray-500'}`}>{formatTime(t.minutes)}</span>
+                              <span className={`tabular-nums ml-2 ${arrived ? 'text-green-600' : 'text-gray-500'}`}>{formatTime(v.minutes)}</span>
                             </div>
                           );
                         })}

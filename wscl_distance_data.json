@@ -72,11 +72,11 @@
       "state": "WA",
       "zip": 98027
     },
-    "Key Penninsula Composite": {
+    "Key Peninsula Composite": {
       "lat": 47.2914845,
       "lng": -122.7754131,
       "formatted_address": "Key Peninsula, Key Center, WA 98394, USA",
-      "city": "Key Penninsula",
+      "city": "Key Peninsula",
       "state": "WA",
       "zip": 98349
     },
@@ -2077,7 +2077,7 @@
         "duration_text": "1 hour 4 mins"
       }
     },
-    "Key Penninsula Composite": {
+    "Key Peninsula Composite": {
       "2024-09-29": {
         "one_way_miles": 122.02297286700001,
         "one_way_minutes": 124.25,
@@ -6248,7 +6248,7 @@
       "season": "Spring 2023"
     },
     {
-      "team": "Key Penninsula Composite",
+      "team": "Key Peninsula Composite",
       "date": "2023-04-16",
       "event_date": "2023-04-16",
       "riders": 11,
@@ -6632,7 +6632,7 @@
       "season": "Spring 2023"
     },
     {
-      "team": "Key Penninsula Composite",
+      "team": "Key Peninsula Composite",
       "date": "2023-04-30",
       "event_date": "2023-04-30",
       "riders": 10,
@@ -7032,7 +7032,7 @@
       "season": "Spring 2023"
     },
     {
-      "team": "Key Penninsula Composite",
+      "team": "Key Peninsula Composite",
       "date": "2023-05-14",
       "event_date": "2023-05-14",
       "riders": 8,
@@ -7432,7 +7432,7 @@
       "season": "Spring 2023"
     },
     {
-      "team": "Key Penninsula Composite",
+      "team": "Key Peninsula Composite",
       "date": "2023-06-04",
       "event_date": "2023-06-04",
       "riders": 10,
@@ -7784,7 +7784,7 @@
       "season": "Fall 2023"
     },
     {
-      "team": "Key Penninsula Composite",
+      "team": "Key Peninsula Composite",
       "date": "2023-09-17",
       "event_date": "2023-09-17",
       "riders": 12,
@@ -8088,7 +8088,7 @@
       "season": "Fall 2023"
     },
     {
-      "team": "Key Penninsula Composite",
+      "team": "Key Peninsula Composite",
       "date": "2023-10-08",
       "event_date": "2023-10-08",
       "riders": 12,
@@ -8440,7 +8440,7 @@
       "season": "Spring 2024"
     },
     {
-      "team": "Key Penninsula Composite",
+      "team": "Key Peninsula Composite",
       "date": "2024-04-14",
       "event_date": "2024-04-14",
       "riders": 11,
@@ -8824,7 +8824,7 @@
       "season": "Spring 2024"
     },
     {
-      "team": "Key Penninsula Composite",
+      "team": "Key Peninsula Composite",
       "date": "2024-04-28",
       "event_date": "2024-04-28",
       "riders": 14,
@@ -9208,7 +9208,7 @@
       "season": "Spring 2024"
     },
     {
-      "team": "Key Penninsula Composite",
+      "team": "Key Peninsula Composite",
       "date": "2024-05-19",
       "event_date": "2024-05-19",
       "riders": 18,
@@ -9592,7 +9592,7 @@
       "season": "Spring 2024"
     },
     {
-      "team": "Key Penninsula Composite",
+      "team": "Key Peninsula Composite",
       "date": "2024-06-02",
       "event_date": "2024-06-02",
       "riders": 13,
@@ -9928,7 +9928,7 @@
       "season": "Fall 2024"
     },
     {
-      "team": "Key Penninsula Composite",
+      "team": "Key Peninsula Composite",
       "date": "2024-09-29",
       "event_date": "2024-09-29",
       "riders": 17,
@@ -10216,7 +10216,7 @@
       "season": "Fall 2024"
     },
     {
-      "team": "Key Penninsula Composite",
+      "team": "Key Peninsula Composite",
       "date": "2024-10-13",
       "event_date": "2024-10-13",
       "riders": 18,
@@ -10568,7 +10568,7 @@
       "season": "Spring 2025"
     },
     {
-      "team": "Key Penninsula Composite",
+      "team": "Key Peninsula Composite",
       "date": "2025-04-13",
       "event_date": "2025-04-13",
       "riders": 16,
@@ -10984,7 +10984,7 @@
       "season": "Spring 2025"
     },
     {
-      "team": "Key Penninsula Composite",
+      "team": "Key Peninsula Composite",
       "date": "2025-04-27",
       "event_date": "2025-04-27",
       "riders": 18,
@@ -11400,7 +11400,7 @@
       "season": "Spring 2025"
     },
     {
-      "team": "Key Penninsula Composite",
+      "team": "Key Peninsula Composite",
       "date": "2025-05-04",
       "event_date": "2025-05-04",
       "riders": 17,
@@ -11816,7 +11816,7 @@
       "season": "Spring 2025"
     },
     {
-      "team": "Key Penninsula Composite",
+      "team": "Key Peninsula Composite",
       "date": "2025-05-18",
       "event_date": "2025-05-18",
       "riders": 14,
@@ -12232,7 +12232,7 @@
       "season": "Spring 2025"
     },
     {
-      "team": "Key Penninsula Composite",
+      "team": "Key Peninsula Composite",
       "date": "2025-06-01",
       "event_date": "2025-06-01",
       "riders": 6,
@@ -12584,7 +12584,7 @@
       "season": "Fall 2025"
     },
     {
-      "team": "Key Penninsula Composite",
+      "team": "Key Peninsula Composite",
       "date": "2025-09-28",
       "event_date": "2025-09-28",
       "riders": 23,
@@ -12920,7 +12920,7 @@
       "season": "Fall 2025"
     },
     {
-      "team": "Key Penninsula Composite",
+      "team": "Key Peninsula Composite",
       "date": "2025-10-12",
       "event_date": "2025-10-12",
       "riders": 11,
@@ -13304,7 +13304,7 @@
       "season": "Spring 2026"
     },
     {
-      "team": "Key Penninsula Composite",
+      "team": "Key Peninsula Composite",
       "date": "2026-04-12",
       "event_date": "2026-04-12",
       "riders": 9,
@@ -13736,7 +13736,7 @@
       "season": "Spring 2026"
     },
     {
-      "team": "Key Penninsula Composite",
+      "team": "Key Peninsula Composite",
       "date": "2026-04-26",
       "event_date": "2026-04-26",
       "riders": 25,
@@ -14168,7 +14168,7 @@
       "season": "Spring 2026"
     },
     {
-      "team": "Key Penninsula Composite",
+      "team": "Key Peninsula Composite",
       "date": "2026-05-03",
       "event_date": "2026-05-03",
       "riders": 31,
@@ -14600,7 +14600,7 @@
       "season": "Spring 2026"
     },
     {
-      "team": "Key Penninsula Composite",
+      "team": "Key Peninsula Composite",
       "date": "2026-05-17",
       "event_date": "2026-05-17",
       "riders": 13,
@@ -15032,7 +15032,7 @@
       "season": "Spring 2026"
     },
     {
-      "team": "Key Penninsula Composite",
+      "team": "Key Peninsula Composite",
       "date": "2026-05-31",
       "event_date": "2026-05-31",
       "riders": 20,
@@ -15416,7 +15416,7 @@
       "season": "Fall 2026"
     },
     {
-      "team": "Key Penninsula Composite",
+      "team": "Key Peninsula Composite",
       "date": "2026-09-20",
       "event_date": "2026-09-20",
       "riders": 23,
