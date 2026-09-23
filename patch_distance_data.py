@@ -90,6 +90,128 @@ def get_season(date_str):
     return f"Unknown {year}"
 
 
+# --- Reusable pieces (sync_from_results_db.py builds on these) ---
+
+def same_spot(a, b, tol=1e-4):
+    """True when two locations share coordinates (same venue)."""
+    return abs(a["lat"] - b["lat"]) < tol and abs(a["lng"] - b["lng"]) < tol
+
+
+def find_venue_coords(data, city, venue):
+    """Coordinates of an earlier race at the same venue, or None."""
+    for loc in data["event_locations"].values():
+        if loc.get("city") == city and loc.get("venue") == venue:
+            return {k: loc[k] for k in ("lat", "lng", "formatted_address")}
+    return None
+
+
+def add_event_location(data, date, city, state, venue, event_id):
+    """Add event_locations[date], reusing known venue coordinates.
+    Returns the number of Google calls made."""
+    if date in data["event_locations"]:
+        return 0
+    calls = 0
+    geo = find_venue_coords(data, city, venue)
+    if not geo:
+        geo = geocode_address(f"{venue}, {city}, {state}")
+        calls += 1
+        if not geo:
+            raise RuntimeError(f"Could not geocode {venue}, {city}, {state}")
+    data["event_locations"][date] = {
+        **geo,
+        "venue": venue,
+        "city": city,
+        "state": state,
+        "event_id": event_id,
+    }
+    return calls
+
+
+def known_distance(data, team, date):
+    """Distance for team -> date's venue, from any race at the same spot."""
+    team_dists = data["distances"].get(team, {})
+    if date in team_dists:
+        return team_dists[date]
+    loc = data["event_locations"][date]
+    for other_date, dist in team_dists.items():
+        other = data["event_locations"].get(other_date)
+        if other and same_spot(other, loc):
+            return dist
+    return None
+
+
+def ensure_distance(data, team, date):
+    """Fill distances[team][date], calling Google only if nothing is cached.
+    Returns the number of Google calls made."""
+    team_dists = data["distances"].setdefault(team, {})
+    if date in team_dists:
+        return 0
+    dist = known_distance(data, team, date)
+    calls = 0
+    if not dist:
+        home = data["team_locations"][team]
+        venue = data["event_locations"][date]
+        dist = get_driving_distance(home["lat"], home["lng"], venue["lat"], venue["lng"])
+        calls += 1
+        if not dist:
+            raise RuntimeError(f"Distance lookup failed for {team} -> {date}")
+    team_dists[date] = dist
+    return calls
+
+
+def build_travel_record(data, team, date, riders):
+    dist = data["distances"][team][date]
+    vehicles = math.ceil(riders / RIDERS_PER_VEHICLE)
+    event_loc = data["event_locations"].get(date, {})
+    return {
+        "team": team,
+        "date": date,
+        "event_date": date,
+        "riders": riders,
+        "vehicles": vehicles,
+        "one_way_miles": dist["one_way_miles"],
+        "round_trip_miles": dist["round_trip_miles"],
+        "total_miles_traveled": dist["round_trip_miles"] * vehicles,
+        "one_way_minutes": dist["one_way_minutes"],
+        "round_trip_minutes": dist["round_trip_minutes"],
+        "total_minutes_traveled": dist["round_trip_minutes"] * vehicles,
+        "venue": event_loc.get("venue"),
+        "city": event_loc.get("city"),
+        "season": get_season(date),
+    }
+
+
+def build_independent_record(data, date, riders):
+    event_loc = data["event_locations"][date]
+    return {
+        "date": date,
+        "event_date": date,
+        "riders": riders,
+        "venue": event_loc.get("venue"),
+        "city": event_loc.get("city"),
+        "season": get_season(date),
+    }
+
+
+def update_metadata(data, generated_at):
+    data["metadata"]["generated_at"] = generated_at
+    data["metadata"]["total_teams"] = len(data["team_locations"])
+    data["metadata"]["total_events"] = len(data["event_locations"])
+    data["metadata"]["total_attendance_records"] = len(data["travel_data"])
+    data["metadata"]["independent_records"] = len(data.get("independent_data", []))
+
+
+def save_data(data):
+    """Write wscl_distance_data.json and the .js copy the dashboard loads."""
+    with open(DATA_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2)
+    js_file = os.path.join(SCRIPT_DIR, "wscl_distance_data.js")
+    with open(js_file, "w", encoding="utf-8") as f:
+        f.write("window.__WSCL_DATA__ = ")
+        json.dump(data, f, indent=2)
+        f.write(";\n")
+
+
 def main():
     print("WSCL Distance Data Patcher")
     print("=" * 40)
@@ -252,17 +374,9 @@ def main():
                 continue
             if team == "Independent":
                 # Add to independent_data
-                event_loc = data["event_locations"].get(date)
-                if event_loc:
+                if date in data["event_locations"]:
                     data.setdefault("independent_data", []).append(
-                        {
-                            "date": date,
-                            "event_date": date,
-                            "riders": riders,
-                            "venue": event_loc.get("venue"),
-                            "city": event_loc.get("city"),
-                            "season": get_season(date),
-                        }
+                        build_independent_record(data, date, riders)
                     )
                 continue
 
@@ -274,25 +388,7 @@ def main():
                 print(f"  WARNING: No distance for {team} -> {date}, skipping")
                 continue
 
-            vehicles = math.ceil(riders / RIDERS_PER_VEHICLE)
-            event_loc = data["event_locations"].get(date, {})
-
-            record = {
-                "team": team,
-                "date": date,
-                "event_date": date,
-                "riders": riders,
-                "vehicles": vehicles,
-                "one_way_miles": dist["one_way_miles"],
-                "round_trip_miles": dist["round_trip_miles"],
-                "total_miles_traveled": dist["round_trip_miles"] * vehicles,
-                "one_way_minutes": dist["one_way_minutes"],
-                "round_trip_minutes": dist["round_trip_minutes"],
-                "total_minutes_traveled": dist["round_trip_minutes"] * vehicles,
-                "venue": event_loc.get("venue"),
-                "city": event_loc.get("city"),
-                "season": get_season(date),
-            }
+            record = build_travel_record(data, team, date, riders)
             new_records.append(record)
 
     data["travel_data"].extend(new_records)
@@ -304,23 +400,12 @@ def main():
     print(f"    Riverside Rampage (2026-04-12): {riverside_count} records")
 
     # --- Step 6: Update metadata ---
-    data["metadata"]["generated_at"] = "2026-04-15T00:00:00.000Z"
-    data["metadata"]["total_teams"] = len(data["team_locations"])
-    data["metadata"]["total_events"] = len(data["event_locations"])
-    data["metadata"]["total_attendance_records"] = len(data["travel_data"])
-    data["metadata"]["independent_records"] = len(data.get("independent_data", []))
+    update_metadata(data, "2026-04-15T00:00:00.000Z")
 
     # --- Step 7: Save ---
     print(f"\nSaving updated data...")
-    with open(DATA_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2)
-
-    # Also regenerate the JS wrapper for file:// dashboard access
+    save_data(data)
     js_file = os.path.join(SCRIPT_DIR, "wscl_distance_data.js")
-    with open(js_file, "w", encoding="utf-8") as f:
-        f.write("window.__WSCL_DATA__ = ")
-        json.dump(data, f, indent=2)
-        f.write(";\n")
     print(f"  Also updated {os.path.basename(js_file)} for dashboard file:// access")
 
     print(f"\nDone!")

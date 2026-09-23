@@ -52,6 +52,9 @@
 
   <script type="text/babel">
     const { useState, useEffect } = React;
+    // CARTO basemap key (public by design; restrict it in the CARTO Basemaps dashboard)
+    const CARTO_KEY = 'cb1_3vbb_1_35ba3f03103f23dc1961648a';
+    const cartoKey = CARTO_KEY ? `?key=${CARTO_KEY}` : '';
 
     function WSCLDashboard() {
       const [data, setData] = useState(null);
@@ -1891,12 +1894,12 @@
       React.useEffect(() => {
         if (!mapContainerRef.current || mapRef.current) return;
         const m = L.map(mapContainerRef.current, { preferCanvas: true, zoomControl: true }).setView([47.5, -120.5], 7);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
+        L.tileLayer(`https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png${cartoKey}`, {
           attribution: '© OpenStreetMap © CARTO',
           subdomains: 'abcd',
           maxZoom: 19,
         }).addTo(m);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', {
+        L.tileLayer(`https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png${cartoKey}`, {
           subdomains: 'abcd', maxZoom: 19, pane: 'shadowPane',
         }).addTo(m);
         mapRef.current = m;
@@ -2281,10 +2284,10 @@
       React.useEffect(() => {
         if (!mapContainerRef.current || mapRef.current) return;
         const m = L.map(mapContainerRef.current, { preferCanvas: true, zoomControl: true }).setView([47.5, -120.5], 7);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
+        L.tileLayer(`https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png${cartoKey}`, {
           attribution: '© OpenStreetMap © CARTO', subdomains: 'abcd', maxZoom: 19,
         }).addTo(m);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', {
+        L.tileLayer(`https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png${cartoKey}`, {
           subdomains: 'abcd', maxZoom: 19, pane: 'shadowPane',
         }).addTo(m);
         mapRef.current = m;

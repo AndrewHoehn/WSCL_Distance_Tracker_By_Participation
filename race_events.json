@@ -30,5 +30,29 @@
     "city": "Gig Harbor",
     "state": "WA",
     "venue": "360 Trails"
+  },
+  "2026-05-17": {
+    "event_id": "399533",
+    "key": "8bbd75e332c4e9a39e3a82a0e3b27ab9",
+    "name": "Methow Mayhem",
+    "city": "Winthrop",
+    "state": "WA",
+    "venue": "Liberty Bell High School"
+  },
+  "2026-05-31": {
+    "event_id": "401307",
+    "key": "6b29e87778c3586db1fbcf15936e423f",
+    "name": "Championships/Thrill at Ski Hill",
+    "city": "Leavenworth",
+    "state": "WA",
+    "venue": "Ski Hill"
+  },
+  "2026-09-20": {
+    "event_id": "419824",
+    "key": "f5f8c473e94cd38c1b03cf8b7e196ae4",
+    "name": "Key Pen Pursuit",
+    "city": "Gig Harbor",
+    "state": "WA",
+    "venue": "360 Trails"
   }
 }

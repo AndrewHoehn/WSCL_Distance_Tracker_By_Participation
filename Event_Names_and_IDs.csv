@@ -1,5 +1,4 @@
 location_key,city,state,venue,event_date,event_id
-"Bellingham, Galbraith",Bellingham,WA,Galbraith,2023-06-11,2023-06-11_Bellingham_Galbraith
 "Cle Elum, Roslyn High School",Cle Elum,WA,Roslyn High School,2024-09-29,2024-09-29_Cle_Elum_Roslyn_High_School
 "Cle Elum, Roslyn High School",Cle Elum,WA,Roslyn High School,2025-04-27,2025-04-27_Cle_Elum_Roslyn_High_School
 "Ephrata, Ephrata, WA",Ephrata,WA,Lions Park,2023-04-30,2023-04-30_Ephrata_Ephrata_WA
@@ -24,3 +23,4 @@ location_key,city,state,venue,event_date,event_id
 "Gig Harbor, 360 Trails",Gig Harbor,WA,360 Trails,2026-05-03,2026-05-03_Gig_Harbor_360_Trails
 "Winthrop, Liberty Bell High School",Winthrop,WA,Liberty Bell High School,2026-05-17,2026-05-17_Winthrop_Liberty_Bell_High_School
 "Leavenworth, Ski Hill",Leavenworth,WA,Ski Hill,2026-05-31,2026-05-31_Leavenworth_Ski_Hill
+"Gig Harbor, 360 Trails",Gig Harbor,WA,360 Trails,2026-09-20,2026-09-20_Gig_Harbor_360_Trails
